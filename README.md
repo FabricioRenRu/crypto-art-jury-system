@@ -1,2 +1,2 @@
-# sistema-criptografico-jurado-arte
-Sistema criptográfico para un concurso de pintura digital: cifrado de las obras, intercambio seguro de claves con el jurado, evaluación con firma ciega del presidente del jurado (sin ver la calificación) y verificación posterior de todas las firmas al finalizar el concurso.
+# crypto-art-jury-system
+Cryptographic system for a digital painting competition: encryption of the artworks, secure key exchange with the jury, evaluation with a blind signature from the jury chairman (without seeing the score), and subsequent verification of all signatures at the end of the competition.
