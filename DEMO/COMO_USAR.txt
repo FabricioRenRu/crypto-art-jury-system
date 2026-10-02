@@ -1,0 +1,137 @@
+DEMO: CONCURSO DE PINTURA CON EVALUACIÓN ANÓNIMA
+
+¿QUÉ ES ESTE DEMO?
+
+Es un mini sitio web que simula la arquitectura del proyecto. Cada recuadro
+de la página representa un dispositivo distinto (pintor, jurado y presidente).
+Toda la criptografía se ejecuta en el navegador, que funciona como "dispositivo
+local". El servidor en Python solo almacena datos cifrados: nunca recibe llaves
+privadas, la llave K_AES ni la imagen en claro.
+
+Etapas implementadas:
+
+  Etapa 1   Firma del consentimiento con ECDSA P-256 sobre SHA-256
+  Etapa 2   Cifrado de la obra con AES-256-GCM
+  Etapa 3   Sobre de llave CK = RSA-OAEP(PK_juez, K_AES), uno por juez
+            (RSA-OAEP implementado a mano en oaep.js, según el RFC 8017)
+
+Etapas pendientes, marcadas en la página:
+
+  Etapa 4   Evaluación del juez (estrellas, hash SHA-256 y firma)
+  Etapa 5   Firma ciega de Chaum del presidente
+  Etapa 6   Verificación pública de votos y conteo
+
+
+REQUISITOS
+
+  Python 3.8 o superior (no requiere instalar librerías)
+  Un navegador moderno: Chrome, Edge o Firefox
+
+
+ESTRUCTURA DE ARCHIVOS
+
+  concurso_web/
+      servidor.py              Servidor central (API y almacenamiento)
+      COMO_USAR.txt       Este archivo
+      web/
+          index.html           Estructura de la página
+          estilos.css          Estilos con los colores del diagrama
+          js/
+              oaep.js          RSA-OAEP propio (MGF1, codificación, cifrado)
+              criptografia.js  AES-GCM, ECDSA, SHA-256 y manejo de llaves
+              api_servidor.js  Comunicación con el servidor
+              vistas.js        Lógica de la interfaz
+
+La carpeta datos/ no se incluye: el servidor la crea al arrancar, junto a
+servidor.py.
+
+
+CÓMO INICIAR EL DEMO
+
+1. Abre una terminal y entra a la carpeta del proyecto:
+
+       cd concurso_web
+
+2. Inicia el servidor:
+
+       python3 servidor.py
+
+   En Windows puede ser "python servidor.py" o "py servidor.py".
+
+3. Abre en el navegador:
+
+       http://localhost:8000
+
+4. Deja la terminal abierta mientras usas la página. Ahí se muestra cada
+   petición que recibe el servidor. Para detenerlo presiona Ctrl + C.
+
+RECORRIDO DEL DEMO
+
+Paso 1. Jurado: crear llaves
+
+  1. En el recuadro morado, en "Juez en este dispositivo", elige juez_1.
+  2. Da clic en "Generar par de llaves".
+     Aparece "Módulo n: 2048 bits" y una huella. En la tabla del servidor
+     se agrega juez_1: solo se publicó la llave pública (n, e).
+  3. Cambia a juez_2 y repite.
+
+Paso 2. Pintor: enviar una obra
+
+  1. En el recuadro verde escribe un nombre y el título de la obra.
+  2. Sube una imagen (PNG, JPG o WEBP, máximo 15 MB).
+  3. Marca la casilla de aceptación de las bases.
+  4. En "Llave de sesión K_AES" elige una opción:
+       Generar automáticamente   El navegador crea 32 bytes aleatorios.
+       Ingresar mi propia llave  Escribe 64 caracteres hexadecimales, o usa
+                                 "Llenar con una llave aleatoria".
+  5. Revisa que los jueces estén marcados en "Jueces destinatarios".
+  6. Da clic en "Firmar, cifrar y enviar".
+
+  La bitácora del pintor muestra, en orden:
+    Etapa 1   Documento de consentimiento, su hash SHA-256 y la firma ECDSA.
+    Etapa 2   K_AES, el IV, el tamaño cifrado y la etiqueta GCM.
+    Etapa 3   Para cada juez: lHash, DB, semilla, maskedDB, maskedSeed y el
+              sobre CK de 256 bytes.
+    Envío     Confirmación del servidor. La K_AES se borra del dispositivo.
+
+Paso 3. Servidor: ver lo que almacena
+
+  1. En el recuadro azul, da clic en la fila de la obra.
+  2. El cuadro de la derecha dibuja los bytes cifrados como píxeles. Sin
+     K_AES el servidor solo ve ruido, y no puede abrir los sobres.
+
+Paso 4. Jurado: abrir la obra
+
+  1. En el recuadro morado selecciona juez_1.
+  2. En "Obras recibidas" da clic en "Abrir obra".
+
+  La bitácora del jurado muestra:
+    EM = CK^d mod n y la semilla y DB recuperados.
+    "K_AES recuperada con nuestro RSA-OAEP".
+    "Web Crypto del navegador obtiene la misma K_AES": comprueba que la
+    implementación propia es compatible con el estándar.
+    "Etiqueta GCM válida": la obra no fue modificada.
+  Debajo aparece la imagen original, descifrada solo en este dispositivo.
+
+Paso 5. Prueba de integridad
+
+  Da clic en "Abrir con un bit alterado". Se invierte un solo bit de la obra
+  cifrada y AES-GCM rechaza el descifrado.
+
+Paso 6. Zona de verificación pública
+
+  En el recuadro gris, para cada obra:
+    "Verificar firma"                 Resultado: Firma válida.
+    "Verificar con nombre cambiado"   Resultado: Firma inválida, porque el
+                                      documento fue modificado.
+  No se necesita ninguna llave privada para verificar.
+
+
+OPCIONAL: USAR LLAVES DE ALGORITMO_RSA_OAEP
+
+LIMITACIONES DEL DEMO
+
+  No hay usuarios ni sesiones: cualquiera puede publicar una llave como juez.
+  El servidor guarda en archivos JSON en lugar de una base de datos.
+  JavaScript y Python no garantizan tiempo constante en las operaciones, así
+  que la implementación propia de RSA-OAEP es didáctica.

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Concurso de pintura - Demostrador criptografico</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+    <header class="encabezado">
+        <h1>Concurso de pintura con evaluacion anonima</h1>
+        <p class="encabezado_descripcion">
+            Cada recuadro es un dispositivo distinto. Las llaves privadas y las obras en claro
+            solo existen dentro de su dispositivo; el servidor recibe unicamente datos cifrados.
+        </p>
+        <ol class="recorrido">
+            <li>Un juez genera su par de llaves y publica la llave publica.</li>
+            <li>El pintor firma su consentimiento, cifra la obra y la envia.</li>
+            <li>El juez abre su sobre de llave y descifra la obra.</li>
+            <li>Cualquiera verifica la firma del consentimiento.</li>
+        </ol>
+    </header>
+
+    <main>
+        <section class="zona zona_actores" aria-label="Actores">
+            <h2 class="titulo_zona">Actores</h2>
+            <div class="actores">
+                <div class="actor">
+                    <span class="actor_nombre">Pintor</span>
+                    <span class="canal">Se registra y firma</span>
+                </div>
+                <div class="actor">
+                    <span class="actor_nombre">Miembro del jurado</span>
+                    <span class="canal">Recibe, descifra y evalua</span>
+                </div>
+                <div class="actor">
+                    <span class="actor_nombre">Presidente del jurado</span>
+                    <span class="canal">Firma a ciegas, sin ver el contenido</span>
+                </div>
+            </div>
+        </section>
+
+        <div class="dispositivos">
+            <!-- Dispositivo del pintor: Etapas 1, 2 y 3 -->
+            <section class="dispositivo dispositivo_pintor" aria-labelledby="titulo_pintor">
+                <h2 id="titulo_pintor" class="titulo_dispositivo">Dispositivo local del pintor</h2>
+                <p class="motor">Motor local: ECDSA P-256, AES-256-GCM, RSA-OAEP</p>
+
+                <form id="formulario_pintor" class="formulario" novalidate>
+                    <fieldset>
+                        <legend>Formulario de consentimiento</legend>
+                        <label for="nombre_pintor">Nombre del pintor</label>
+                        <input id="nombre_pintor" type="text" autocomplete="name" required>
+
+                        <label for="titulo_obra">Titulo de la obra</label>
+                        <input id="titulo_obra" type="text" required>
+
+                        <label for="archivo_pintura">Pintura digital</label>
+                        <input id="archivo_pintura" type="file" accept="image/*" required>
+                        <img id="vista_previa_pintura" class="vista_previa" alt="" hidden>
+
+                        <label class="casilla">
+                            <input id="acepto_bases" type="checkbox">
+                            Acepto las bases del concurso y autorizo la evaluacion de mi obra
+                        </label>
+                    </fieldset>
+
+                    <fieldset>
+                        <legend>Llave de sesion K_AES</legend>
+                        <label class="opcion">
+                            <input type="radio" name="modo_llave_aes" value="automatica" checked>
+                            Generar automaticamente (recomendado)
+                        </label>
+                        <label class="opcion">
+                            <input type="radio" name="modo_llave_aes" value="manual">
+                            Ingresar mi propia llave
+                        </label>
+                        <div id="contenedor_llave_manual" hidden>
+                            <label for="llave_aes_manual">64 caracteres hexadecimales (256 bits)</label>
+                            <input id="llave_aes_manual" class="dato" type="text" spellcheck="false" maxlength="64">
+                            <button id="boton_llave_aleatoria" type="button" class="boton_secundario">Llenar con una llave aleatoria</button>
+                        </div>
+                    </fieldset>
+
+                    <fieldset>
+                        <legend>Jueces destinatarios</legend>
+                        <div id="lista_jueces_destino" class="lista_jueces">
+                            <p class="vacio">Aun no hay jueces con llave publica. Genera una en el dispositivo del jurado.</p>
+                        </div>
+                    </fieldset>
+
+                    <button id="boton_enviar_obra" type="submit" class="boton_principal">Firmar, cifrar y enviar</button>
+                    <p id="mensaje_pintor" class="mensaje" role="status"></p>
+                </form>
+
+                <details class="bitacora_contenedor" open>
+                    <summary>Bitacora del motor criptografico</summary>
+                    <ol id="bitacora_pintor" class="bitacora"></ol>
+                </details>
+            </section>
+
+            <!-- Dispositivo del jurado: llaves y apertura de sobres -->
+            <section class="dispositivo dispositivo_jurado" aria-labelledby="titulo_jurado">
+                <h2 id="titulo_jurado" class="titulo_dispositivo">Dispositivo local del jurado</h2>
+                <p class="motor">Motor local: RSA-OAEP, AES-256-GCM</p>
+
+                <div class="formulario">
+                    <fieldset>
+                        <legend>Sesion</legend>
+                        <label for="juez_activo">Juez en este dispositivo</label>
+                        <select id="juez_activo">
+                            <option value="juez_1">juez_1</option>
+                            <option value="juez_2">juez_2</option>
+                            <option value="juez_3">juez_3</option>
+                        </select>
+                    </fieldset>
+
+                    <fieldset>
+                        <legend>Par de llaves RSA-2048</legend>
+                        <dl id="estado_llave_juez" class="estado_llave"></dl>
+                        <div class="botones">
+                            <button id="boton_generar_llaves" type="button" class="boton_principal">Generar par de llaves</button>
+                            <label class="boton_secundario boton_archivo">
+                                Importar llave privada
+                                <input id="archivo_llave_privada" type="file" accept=".json,application/json">
+                            </label>
+                            <button id="boton_descargar_llave" type="button" class="boton_secundario">Descargar llave privada</button>
+                            <button id="boton_publicar_llave" type="button" class="boton_secundario">Publicar llave publica</button>
+                        </div>
+                        <p class="nota">Acepta los archivos <code>juez_N_privada.json</code> generados por <code>rsa_llaves.py</code>.</p>
+                    </fieldset>
+
+                    <fieldset>
+                        <legend>Obras recibidas</legend>
+                        <ul id="lista_obras_juez" class="lista_obras"></ul>
+                    </fieldset>
+
+                    <figure id="figura_obra_descifrada" class="obra_descifrada" hidden>
+                        <img id="imagen_obra_descifrada" alt="Obra descifrada">
+                        <figcaption id="pie_obra_descifrada"></figcaption>
+                    </figure>
+                    <p id="mensaje_jurado" class="mensaje" role="status"></p>
+
+                    <fieldset disabled class="pendiente">
+                        <legend>Evaluacion (Etapa 4, semana 4)</legend>
+                        <p>Selector de estrellas, comentarios, hash SHA-256 y firma del juez.</p>
+                    </fieldset>
+                </div>
+
+                <details class="bitacora_contenedor" open>
+                    <summary>Bitacora del motor criptografico</summary>
+                    <ol id="bitacora_jurado" class="bitacora"></ol>
+                </details>
+            </section>
+
+            <!-- Dispositivo del presidente: pendiente -->
+            <section class="dispositivo dispositivo_presidente" aria-labelledby="titulo_presidente">
+                <h2 id="titulo_presidente" class="titulo_dispositivo">Dispositivo local del presidente</h2>
+                <p class="motor">Motor local: firma ciega RSA (Chaum)</p>
+                <div class="pendiente_bloque">
+                    <p>Etapa 5, a cargo de otro integrante del equipo.</p>
+                    <p class="formula">s' = (h')<sup>d</sup> mod n</p>
+                    <p>Recibira el hash cegado h' del juez y regresara la firma s' sin conocer la evaluacion ni la identidad del pintor.</p>
+                </div>
+            </section>
+        </div>
+
+        <div class="canales" aria-hidden="true">
+            <span class="canal">Sube: consentimiento firmado, pintura cifrada y sobres de llave (uno por juez)</span>
+            <span class="canal">Sube: llave publica (n, e). Descarga: pintura cifrada y su sobre</span>
+            <span class="canal">Clave publica del presidente (e, n)</span>
+        </div>
+
+        <!-- Servidor central -->
+        <section class="zona zona_servidor" aria-labelledby="titulo_servidor">
+            <div class="cabecera_zona">
+                <h2 id="titulo_servidor" class="titulo_zona">Servidor central del concurso</h2>
+                <div class="botones">
+                    <button id="boton_actualizar" type="button" class="boton_secundario">Actualizar</button>
+                    <button id="boton_reiniciar" type="button" class="boton_peligro">Borrar todos los datos</button>
+                </div>
+            </div>
+
+            <div class="servidor_contenido">
+                <div class="almacen">
+                    <h3>Llaves publicas del jurado</h3>
+                    <div class="tabla_desplazable">
+                        <table>
+                            <thead>
+                                <tr><th>Juez</th><th class="numero">Bits</th><th>Huella</th></tr>
+                            </thead>
+                            <tbody id="tabla_llaves_servidor"></tbody>
+                        </table>
+                    </div>
+
+                    <h3>Almacen de contenido: pinturas cifradas y sobres de llave</h3>
+                    <div class="tabla_desplazable">
+                        <table>
+                            <thead>
+                                <tr><th>Obra</th><th>Recibida</th><th class="numero">Bytes cifrados</th><th>Sobres para</th></tr>
+                            </thead>
+                            <tbody id="tabla_obras_servidor"></tbody>
+                        </table>
+                    </div>
+                    <p class="nota">Selecciona una obra para ver lo que el servidor tiene guardado.</p>
+                </div>
+
+                <figure class="vista_servidor">
+                    <canvas id="lienzo_servidor" width="180" height="180"></canvas>
+                    <figcaption id="pie_lienzo_servidor">Los bytes cifrados de una obra se dibujan aqui como pixeles.</figcaption>
+                </figure>
+            </div>
+        </section>
+
+        <div class="canales canales_unico" aria-hidden="true">
+            <span class="canal">Publica cada consentimiento con su firma y la llave publica del pintor</span>
+        </div>
+
+        <!-- Zona de verificacion publica -->
+        <section class="zona zona_publica" aria-labelledby="titulo_publica">
+            <h2 id="titulo_publica" class="titulo_zona">Zona de verificacion publica</h2>
+            <p class="nota">Cualquier persona puede comprobar que cada consentimiento fue firmado por su autor y no se modifico. No se necesita ninguna llave privada.</p>
+            <div class="tabla_desplazable">
+                <table>
+                    <thead>
+                        <tr><th>Obra</th><th>Titulo</th><th>Pintor</th><th>SHA-256 del documento</th><th>Verificacion</th></tr>
+                    </thead>
+                    <tbody id="tabla_consentimientos"></tbody>
+                </table>
+            </div>
+            <p class="nota pendiente_texto">Verificacion de votos s<sup>e</sup> mod n = SHA-256(evaluacion) y conteo de estrellas: Etapa 6.</p>
+        </section>
+    </main>
+
+    <script type="module" src="js/vistas.js"></script>
+</body>
+</html>

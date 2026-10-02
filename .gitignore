@@ -1,0 +1,10 @@
+# Llaves privadas generadas
+llaves/
+*_privada.json
+
+# Datos que guarda el servidor al correr
+datos/
+
+# Archivos compilados de Python
+__pycache__/
+*.pyc

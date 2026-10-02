@@ -1,0 +1,804 @@
+:root
+{
+    --texto: #1c2230;
+    --texto_suave: #5a6172;
+    --fondo: #fbfbfc;
+    --linea: #c9ccd4;
+
+    --pintor: #2f7d45;
+    --pintor_fondo: #ecf6ee;
+    --jurado: #6f45b8;
+    --jurado_fondo: #f2edfa;
+    --presidente: #b0841a;
+    --presidente_fondo: #fdf6e2;
+    --servidor: #335f9e;
+    --servidor_fondo: #e9f0fa;
+    --publica: #5d6168;
+    --publica_fondo: #f1f2f3;
+
+    --exito: #1f7a3d;
+    --error: #b42318;
+
+    --fuente: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --fuente_datos: "IBM Plex Mono", "Consolas", ui-monospace, monospace;
+}
+
+*,
+*::before,
+*::after
+{
+    box-sizing: border-box;
+}
+
+body
+{
+    margin: 0;
+    padding: 2rem clamp(1rem, 3vw, 2.5rem) 4rem;
+    background: var(--fondo);
+    color: var(--texto);
+    font-family: var(--fuente);
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+main
+{
+    max-width: 1320px;
+    margin: 0 auto;
+}
+
+h1,
+h2,
+h3
+{
+    margin: 0;
+    line-height: 1.2;
+}
+
+code,
+.dato
+{
+    font-family: var(--fuente_datos);
+}
+
+/* Encabezado */
+
+.encabezado
+{
+    max-width: 1320px;
+    margin: 0 auto 2rem;
+}
+
+.encabezado h1
+{
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.encabezado_descripcion
+{
+    max-width: 68ch;
+    margin: 0.6rem 0 1.2rem;
+    color: var(--texto_suave);
+}
+
+.recorrido
+{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.5rem 1.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: paso;
+}
+
+.recorrido li
+{
+    position: relative;
+    padding-left: 2.1rem;
+    counter-increment: paso;
+}
+
+.recorrido li::before
+{
+    content: counter(paso);
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 1.5px solid var(--texto);
+    border-radius: 50%;
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 1.35rem;
+    text-align: center;
+}
+
+/* Zonas grandes (actores, servidor, publica) */
+
+.zona
+{
+    padding: 1.1rem 1.3rem 1.3rem;
+    border: 1.5px solid var(--linea);
+    border-radius: 12px;
+}
+
+.titulo_zona
+{
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.zona_actores
+{
+    background: var(--publica_fondo);
+}
+
+.actores
+{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-top: 0.8rem;
+}
+
+.actor
+{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.actor_nombre
+{
+    padding: 0.45rem 1.6rem;
+    border: 1.5px solid var(--texto);
+    border-radius: 50%;
+    background: #fff;
+    font-weight: 600;
+    text-align: center;
+}
+
+.canal
+{
+    padding: 0.25rem 0.6rem;
+    border: 1px solid var(--linea);
+    border-radius: 4px;
+    background: #e7e8eb;
+    color: var(--texto_suave);
+    font-size: 0.78rem;
+    text-align: center;
+}
+
+.canales
+{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin: 0.75rem 0;
+    justify-items: center;
+}
+
+.canales_unico
+{
+    grid-template-columns: 1fr;
+}
+
+.canales .canal
+{
+    max-width: 30ch;
+}
+
+/* Dispositivos locales */
+
+.dispositivos
+{
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+    align-items: start;
+}
+
+.dispositivo
+{
+    padding: 1rem 1.1rem 1.2rem;
+    border: 2px dashed;
+    border-radius: 12px;
+}
+
+.dispositivo_pintor
+{
+    border-color: var(--pintor);
+    background: var(--pintor_fondo);
+    --acento: var(--pintor);
+}
+
+.dispositivo_jurado
+{
+    border-color: var(--jurado);
+    background: var(--jurado_fondo);
+    --acento: var(--jurado);
+}
+
+.dispositivo_presidente
+{
+    border-color: var(--presidente);
+    background: var(--presidente_fondo);
+    --acento: var(--presidente);
+}
+
+.titulo_dispositivo
+{
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--acento);
+}
+
+.motor
+{
+    margin: 0.2rem 0 1rem;
+    color: var(--texto_suave);
+    font-size: 0.82rem;
+}
+
+/* Formularios */
+
+.formulario fieldset
+{
+    margin: 0 0 0.9rem;
+    padding: 0.7rem 0.9rem 0.9rem;
+    border: 1px solid color-mix(in srgb, var(--acento) 35%, white);
+    border-radius: 8px;
+    background: #fff;
+}
+
+.formulario legend
+{
+    padding: 0 0.3rem;
+    font-weight: 600;
+    font-size: 0.88rem;
+}
+
+.formulario label
+{
+    display: block;
+    margin: 0.55rem 0 0.2rem;
+    font-size: 0.85rem;
+}
+
+.formulario input[type="text"],
+.formulario select
+{
+    width: 100%;
+    padding: 0.45rem 0.55rem;
+    border: 1px solid var(--linea);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--texto);
+    font: inherit;
+}
+
+.formulario input[type="file"]
+{
+    max-width: 100%;
+    font-size: 0.82rem;
+}
+
+.formulario .casilla,
+.formulario .opcion
+{
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+.formulario .casilla input,
+.formulario .opcion input
+{
+    margin-top: 0.25rem;
+    accent-color: var(--acento);
+}
+
+input:focus-visible,
+select:focus-visible,
+button:focus-visible,
+summary:focus-visible,
+.boton_archivo:focus-within
+{
+    outline: 2px solid var(--acento, var(--servidor));
+    outline-offset: 2px;
+}
+
+.vista_previa
+{
+    display: block;
+    max-width: 100%;
+    max-height: 160px;
+    margin-top: 0.5rem;
+    border-radius: 6px;
+}
+
+.lista_jueces label
+{
+    margin: 0.25rem 0;
+}
+
+.vacio,
+.nota
+{
+    margin: 0.4rem 0 0;
+    color: var(--texto_suave);
+    font-size: 0.82rem;
+}
+
+/* Botones */
+
+.botones
+{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-top: 0.6rem;
+}
+
+.boton_principal,
+.boton_secundario,
+.boton_peligro
+{
+    display: inline-block;
+    padding: 0.45rem 0.85rem;
+    border: 1.5px solid var(--acento, var(--servidor));
+    border-radius: 6px;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.boton_principal
+{
+    background: var(--acento, var(--servidor));
+    color: #fff;
+}
+
+.boton_secundario
+{
+    background: #fff;
+    color: var(--acento, var(--servidor));
+}
+
+.boton_peligro
+{
+    border-color: var(--error);
+    background: #fff;
+    color: var(--error);
+}
+
+.formulario > .boton_principal
+{
+    width: 100%;
+    padding: 0.65rem;
+}
+
+button:disabled
+{
+    opacity: 0.55;
+    cursor: progress;
+}
+
+.boton_archivo
+{
+    position: relative;
+    margin: 0 !important;
+}
+
+.boton_archivo input
+{
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+#contenedor_llave_manual .boton_secundario
+{
+    margin-top: 0.45rem;
+}
+
+.mensaje
+{
+    min-height: 1.4em;
+    margin: 0.5rem 0 0;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.mensaje.exito
+{
+    color: var(--exito);
+}
+
+.mensaje.error
+{
+    color: var(--error);
+}
+
+/* Estado de la llave del juez */
+
+.estado_llave
+{
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.15rem 0.8rem;
+    margin: 0.3rem 0 0;
+    font-size: 0.85rem;
+}
+
+.estado_llave dt
+{
+    color: var(--texto_suave);
+}
+
+.estado_llave dd
+{
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+/* Lista de obras del juez */
+
+.lista_obras
+{
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.lista_obras li
+{
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+    padding: 0.45rem 0;
+    border-bottom: 1px solid #eee;
+}
+
+.lista_obras li:last-child
+{
+    border-bottom: 0;
+}
+
+.obra_descifrada
+{
+    margin: 0 0 0.9rem;
+    padding: 0.6rem;
+    border: 1px solid color-mix(in srgb, var(--acento) 35%, white);
+    border-radius: 8px;
+    background: #fff;
+}
+
+.obra_descifrada img
+{
+    display: block;
+    max-width: 100%;
+    max-height: 280px;
+    margin: 0 auto;
+}
+
+.obra_descifrada figcaption
+{
+    margin-top: 0.4rem;
+    font-size: 0.82rem;
+    color: var(--texto_suave);
+    text-align: center;
+}
+
+/* Etapas pendientes */
+
+.pendiente
+{
+    opacity: 0.6;
+}
+
+.pendiente p
+{
+    margin: 0.3rem 0 0;
+    font-size: 0.82rem;
+}
+
+.pendiente_bloque
+{
+    padding: 0.8rem 0.9rem;
+    border: 1px dashed var(--presidente);
+    border-radius: 8px;
+    background: #fff;
+    font-size: 0.85rem;
+    color: var(--texto_suave);
+}
+
+.pendiente_bloque p
+{
+    margin: 0.4rem 0;
+}
+
+.formula
+{
+    font-family: var(--fuente_datos);
+    font-size: 1rem;
+    color: var(--texto);
+    text-align: center;
+}
+
+.pendiente_texto
+{
+    font-style: italic;
+}
+
+/* Bitacora */
+
+.bitacora_contenedor summary
+{
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.88rem;
+}
+
+.bitacora
+{
+    max-height: 420px;
+    margin: 0.5rem 0 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+    font-size: 0.8rem;
+}
+
+.bitacora li
+{
+    padding: 0.35rem 0.5rem;
+    border-left: 3px solid color-mix(in srgb, var(--acento) 40%, white);
+    background: #fff;
+}
+
+.bitacora li + li
+{
+    margin-top: 2px;
+}
+
+.bitacora .etapa
+{
+    margin-top: 0.6rem;
+    border-left-color: var(--acento);
+    background: transparent;
+    font-weight: 600;
+    color: var(--acento);
+}
+
+.bitacora .etapa:first-child
+{
+    margin-top: 0;
+}
+
+.bitacora .ok
+{
+    border-left-color: var(--exito);
+}
+
+.bitacora .falla
+{
+    border-left-color: var(--error);
+    color: var(--error);
+}
+
+.bitacora .valor
+{
+    display: block;
+    font-family: var(--fuente_datos);
+    font-size: 0.75rem;
+    color: var(--texto_suave);
+    overflow-wrap: anywhere;
+}
+
+/* Servidor */
+
+.zona_servidor
+{
+    border-color: var(--servidor);
+    background: var(--servidor_fondo);
+    --acento: var(--servidor);
+}
+
+.cabecera_zona
+{
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.cabecera_zona .botones
+{
+    margin: 0;
+}
+
+.servidor_contenido
+{
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 1.5rem;
+    margin-top: 0.8rem;
+}
+
+.almacen h3
+{
+    margin: 0.8rem 0 0.4rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+.almacen h3:first-child
+{
+    margin-top: 0;
+}
+
+.tabla_desplazable
+{
+    overflow-x: auto;
+}
+
+table
+{
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    font-size: 0.83rem;
+}
+
+th,
+td
+{
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid #e3e5ea;
+    text-align: left;
+    white-space: nowrap;
+}
+
+th
+{
+    font-weight: 600;
+    color: var(--texto_suave);
+}
+
+td.dato,
+td .dato
+{
+    font-size: 0.78rem;
+}
+
+td.numero,
+th.numero
+{
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+#tabla_obras_servidor tr
+{
+    cursor: pointer;
+}
+
+#tabla_obras_servidor tr:hover,
+#tabla_obras_servidor tr.seleccionada
+{
+    background: color-mix(in srgb, var(--servidor) 10%, white);
+}
+
+.vista_servidor
+{
+    margin: 0;
+    width: 220px;
+}
+
+.vista_servidor canvas
+{
+    display: block;
+    width: 220px;
+    height: 220px;
+    border: 1.5px solid var(--servidor);
+    border-radius: 6px;
+    background: repeating-linear-gradient(45deg, #fff 0 8px, #eef2f8 8px 16px);
+    image-rendering: pixelated;
+}
+
+.vista_servidor figcaption
+{
+    margin-top: 0.4rem;
+    font-size: 0.8rem;
+    color: var(--texto_suave);
+}
+
+/* Zona publica */
+
+.zona_publica
+{
+    border-color: var(--publica);
+    background: var(--publica_fondo);
+    --acento: var(--publica);
+}
+
+.zona_publica .tabla_desplazable
+{
+    margin-top: 0.7rem;
+}
+
+.resultado_verificacion
+{
+    font-weight: 600;
+}
+
+.resultado_verificacion.exito
+{
+    color: var(--exito);
+}
+
+.resultado_verificacion.error
+{
+    color: var(--error);
+}
+
+.acciones_tabla
+{
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.acciones_tabla button
+{
+    padding: 0.25rem 0.6rem;
+    font-size: 0.78rem;
+}
+
+/* Adaptacion a pantallas pequenas */
+
+@media (max-width: 1000px)
+{
+    .dispositivos,
+    .actores,
+    .canales
+    {
+        grid-template-columns: 1fr;
+    }
+
+    .canales
+    {
+        justify-items: stretch;
+    }
+
+    .canales .canal
+    {
+        max-width: none;
+    }
+
+    .servidor_contenido
+    {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (prefers-reduced-motion: reduce)
+{
+    *
+    {
+        scroll-behavior: auto !important;
+    }
+}
