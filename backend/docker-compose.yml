@@ -1,0 +1,26 @@
+# Levantar el contenedor
+# docker compose up -d
+# Ver estado de contenedores
+# docker ps
+# Ver logs en tiempo real
+# docker logs -f postgres-db
+# Detener contenedor
+# docker compose down
+# conectarse a la DB
+# docker exec -it postgres-db psql -U admin -d painting_db
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=lalito
+      - POSTGRES_PASSWORD=P1s4Pl5m1
+      - POSTGRES_DB=painting_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
