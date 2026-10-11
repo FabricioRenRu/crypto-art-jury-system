@@ -1,0 +1,33 @@
+/**
+ * index.css
+ * Estilos globales: directivas de Tailwind + los estilos base que venían
+ * en el <style> de los HTML originales (sin márgenes, sin scrollbar visible, etc.).
+ */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    overscroll-behavior: none;
+  }
+
+  main > :first-child {
+    margin-top: 0 !important;
+  }
+
+  main > :last-child {
+    margin-bottom: 0 !important;
+  }
+}
+
+/* Oculta la barra de scroll (igual que en el diseño original) */
+::-webkit-scrollbar {
+  display: none;
+}
