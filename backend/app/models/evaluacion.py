@@ -1,7 +1,9 @@
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, func
 from sqlalchemy import Integer, Text, ForeignKey
 from app.models.base import Base
 from enum import Enum
+import uuid
+from sqlalchemy.dialects.postgresql import UUID
 
 class EstadoEvaluacion(str, Enum):
     ESPERANDO_FIRMA = "ESPERANDO_FIRMA"
@@ -12,18 +14,19 @@ class EstadoEvaluacion(str, Enum):
 class Evaluacion(Base):
     __tablename__ = "evaluaciones"
 
-    id_evaluacion: Mapped[int] = mapped_column(
-        Integer, 
-        primary_key=True, 
-        index=True
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        server_default=func.gen_random_uuid()
     )
 
-    id_pintura: Mapped[int] = mapped_column(
+    id_pintura: Mapped[uuid.UUID] = mapped_column(
         Integer, 
         ForeignKey("pinturas.id_pintura")
     )
 
-    id_jurado: Mapped[int] = mapped_column(
+    id_jurado: Mapped[uuid.UUID] = mapped_column(
         Integer, 
         ForeignKey("jurados.id_jurado")
     )

@@ -15,12 +15,12 @@ class Pintura(Base):
         server_default=func.gen_random_uuid()
     )
 
-    usuario_id: Mapped[int] = mapped_column(
+    usuario_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("usuarios.id"), 
         unique=True
     )
 
-    ruta_pintura_cifrada: Mapped[str] = mapped_column(
+    ruta_pintura_cifrada: Mapped[uuid.UUID] = mapped_column(
         String(255), 
         nullable=False
     )
