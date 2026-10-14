@@ -23,12 +23,12 @@ class Evaluacion(Base):
 
     id_pintura: Mapped[uuid.UUID] = mapped_column(
         Integer, 
-        ForeignKey("pinturas.id_pintura")
+        ForeignKey("pinturas.id")
     )
 
     id_jurado: Mapped[uuid.UUID] = mapped_column(
         Integer, 
-        ForeignKey("jurados.id_jurado")
+        ForeignKey("jurados.id")
     )
     
     estado: Mapped[EstadoEvaluacion] = mapped_column(
