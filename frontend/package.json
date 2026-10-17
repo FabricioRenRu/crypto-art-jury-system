@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "pyodide": "^314.0.7",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.4"

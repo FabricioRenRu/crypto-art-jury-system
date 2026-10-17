@@ -5,13 +5,16 @@
  */
 import { BrowserRouter } from 'react-router-dom';
 import AppRouter from './routes/AppRouter';
+import { CryptoProvider } from './hooks/useCryptoWorker';
 
 function App() {
   
 
   return (
     <BrowserRouter>
-      <AppRouter />
+      <CryptoProvider>
+        <AppRouter />
+      </CryptoProvider>
     </BrowserRouter>
   )
 }
