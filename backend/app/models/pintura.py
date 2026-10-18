@@ -4,10 +4,18 @@ from sqlalchemy import ForeignKey, func, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
 from typing import List
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from app.models.pintor import Pintor
+    from app.models.sobrellave import SobreLlave
+    from app.models.evaluacion import Evaluacion
+
+
 class Pintura(Base):
     """
     Clase que representa la tabla pintura
     """
+    __tablename__ = "pinturas"
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         primary_key=True,
@@ -15,12 +23,13 @@ class Pintura(Base):
         server_default=func.gen_random_uuid()
     )
 
-    usuario_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("usuarios.id"), 
+    pintor_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("pintores.id"), 
         unique=True
     )
 
-    ruta_pintura_cifrada: Mapped[uuid.UUID] = mapped_column(
+    ruta_pintura_cifrada: Mapped[str] = mapped_column(
         String(255), 
         nullable=False
     )

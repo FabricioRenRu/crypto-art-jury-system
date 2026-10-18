@@ -1,9 +1,14 @@
-from sqlalchemy.orm import Mapped, mapped_column, relationship, func
-from sqlalchemy import Integer, Text, ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import Integer, Text, ForeignKey, func, Enum as SQLEnum
 from app.models.base import Base
 from enum import Enum
 import uuid
 from sqlalchemy.dialects.postgresql import UUID
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from app.models.pintura import Pintura
+    from app.models.jurado import Jurado
+
 
 class EstadoEvaluacion(str, Enum):
     ESPERANDO_FIRMA = "ESPERANDO_FIRMA"
@@ -22,17 +27,17 @@ class Evaluacion(Base):
     )
 
     id_pintura: Mapped[uuid.UUID] = mapped_column(
-        Integer, 
+        UUID(as_uuid=True), 
         ForeignKey("pinturas.id")
     )
 
     id_jurado: Mapped[uuid.UUID] = mapped_column(
-        Integer, 
+        UUID(as_uuid=True), 
         ForeignKey("jurados.id")
     )
     
     estado: Mapped[EstadoEvaluacion] = mapped_column(
-        Enum(EstadoEvaluacion, native_enum=False, length=50), 
+        SQLEnum(EstadoEvaluacion, native_enum=False, length=50), 
         default=EstadoEvaluacion.ESPERANDO_FIRMA
     )
     
