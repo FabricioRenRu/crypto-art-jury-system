@@ -7,7 +7,7 @@
 # Detener contenedor
 # docker compose down
 # conectarse a la DB
-# docker exec -it postgres-db psql -U admin -d painting_db
+# docker exec -it postgres-db psql -U lalito -d painting_db
 
 services:
   postgres:
