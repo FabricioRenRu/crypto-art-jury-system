@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Iniciar Sesión - ArtClash Pro</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&amp;family=Space+Grotesk:wght@600;700&amp;family=Work+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "surface": "#131313",
+            "surface-dim": "#131313",
+            "surface-container-lowest": "#0e0e0e",
+            "surface-container-low": "#1b1c1c",
+            "surface-container": "#1f2020",
+            "surface-container-high": "#2a2a2a",
+            "surface-container-highest": "#353535",
+            "surface-bright": "#393939",
+            "primary": "#ffb693",
+            "primary-container": "#ff6b00",
+            "on-primary": "#561f00",
+            "secondary": "#c6c6c7",
+            "secondary-container": "#454747",
+            "tertiary": "#ffb690",
+            "tertiary-container": "#f77214",
+            "outline": "#a98a7d",
+            "outline-variant": "#5a4136",
+            "on-surface": "#e4e2e1",
+            "on-surface-variant": "#e2bfb0",
+            "background": "#131313"
+          },
+          fontFamily: {
+            "display": ["Space Grotesk", "sans-serif"],
+            "headline-lg": ["Space Grotesk", "sans-serif"],
+            "headline-md": ["Space Grotesk", "sans-serif"],
+            "headline-sm": ["Space Grotesk", "sans-serif"],
+            "title-lg": ["Space Grotesk", "sans-serif"],
+            "title-md": ["Work Sans", "sans-serif"],
+            "body-lg": ["Work Sans", "sans-serif"],
+            "body-md": ["Work Sans", "sans-serif"],
+            "body-sm": ["Work Sans", "sans-serif"],
+            "label-lg": ["JetBrains Mono", "monospace"],
+            "label-md": ["JetBrains Mono", "monospace"],
+            "label-sm": ["JetBrains Mono", "monospace"]
+          }
+        }
+      }
+    };
+  </script>
+<style>
+    body {
+      background-color: #131313;
+      color: #e4e2e1;
+      font-family: 'Work Sans', sans-serif;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-surface text-on-surface flex flex-col justify-between selection:bg-primary-container selection:text-white antialiased">
+<!-- Header -->
+<header class="w-full bg-surface-container-highest/80 backdrop-blur-xl border-b border-surface-container-high sticky top-0 z-50">
+<div class="max-w-7xl mx-auto h-20 px-6 sm:px-8 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<a class="flex items-center gap-3 group" href="#">
+<img alt="ArtClash Pro Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1UQnmYwtCdbCRFd0epQz486nRdJMonT0H-L-Xtt69AWhwokKDwnOgndRx84v1w6eN8kO7_BBo-1YMXG8iEe1T29iO-V-EjLUQMmcosUq3FL-qvAwwM0Qky5FuaT68t6Vsh3hhbAMbw_CmzU3T_j8DJZfr59rhJ4wIy95tfncECQaI276ZFbLu6CZo8N06M7r_2vkk2HTYkz1U_XB1Or4Vpxx-SKfv9d8Yyel4wrWFNOjvBWr1bExqTXB_o"/>
+<span class="font-['Space_Grotesk'] text-xl uppercase tracking-tight text-white font-bold group-hover:opacity-90 transition-opacity">
+            ArtClash<span class="text-primary-container ml-0.5">Pro</span>
+</span>
+</a>
+<div class="hidden sm:flex items-center gap-2 bg-surface-container px-2.5 py-1 rounded border border-outline-variant/30 ml-2">
+<span class="h-2 w-2 rounded-full bg-primary-container animate-pulse"></span>
+<span class="font-['JetBrains_Mono'] text-[11px] text-secondary tracking-wider uppercase">Live Arena</span>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button aria-label="Notificaciones" class="w-10 h-10 flex items-center justify-center rounded-lg text-secondary hover:text-white hover:bg-surface-bright transition-colors relative">
+<span class="material-symbols-outlined text-[20px]">notifications</span>
+<span class="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-primary-container ring-2 ring-surface-variant"></span>
+</button>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="w-full flex-1 flex flex-col justify-center items-center py-12 px-4 sm:px-6 lg:px-8">
+<div class="w-full max-w-xl mx-auto flex flex-col gap-8">
+<!-- Hero / Title Section -->
+<div class="flex flex-col items-center text-center gap-3">
+<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface-container-high border border-outline-variant/30 text-primary-container font-['JetBrains_Mono'] text-xs font-semibold uppercase tracking-wider">
+<span class="w-2 h-2 rounded-full bg-primary-container animate-ping"></span>
+          ACCESO A LA PLATAFORMA • TEMPORADA 2025
+        </div>
+<h1 class="font-['Space_Grotesk'] text-3xl sm:text-4xl lg:text-[40px] leading-tight font-bold uppercase tracking-tight text-white">
+          INICIAR SESIÓN <span class="text-primary-container">ARTCLASH PRO</span>
+</h1>
+<p class="font-['Work Sans'] text-base sm:text-lg text-secondary max-w-md">
+          Bienvenido de vuelta. Ingresa a tu panel de pintor o jurado para continuar la competencia en tiempo real.
+        </p>
+</div>
+<!-- Centered Login Card -->
+<div class="w-full bg-surface-container-low border border-surface-container-high/60 rounded-2xl p-6 sm:p-8 shadow-2xl">
+<!-- Card Header -->
+<div class="flex items-start gap-3.5 pb-6 mb-6 border-b border-surface-container-high/60">
+<div class="w-10 h-10 rounded-lg bg-primary-container/10 border border-primary-container/20 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-primary-container text-[22px]">key</span>
+</div>
+<div>
+<h2 class="font-['Space_Grotesk'] text-xl font-bold text-white">Inicio de sesión</h2>
+<p class="font-['Work Sans'] text-sm text-secondary">Ingresa tus datos autorizados de participante o juez</p>
+</div>
+</div>
+<!-- Form -->
+<form class="flex flex-col gap-5" onsubmit="event.preventDefault();">
+<!-- Field 1: Email -->
+<div class="flex flex-col gap-2">
+<div class="flex items-center justify-between">
+<label class="font-['JetBrains_Mono'] text-xs font-semibold uppercase tracking-wider text-secondary" for="email-input">
+                CORREO ELECTRÓNICO
+              </label>
+<span class="font-['Work Sans'] text-xs text-secondary/70">Oficial o alias registrado</span>
+</div>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-3.5 text-secondary/70 text-[20px] pointer-events-none">mail</span>
+<input class="w-full bg-surface-container-highest text-white placeholder:text-secondary/50 pl-11 pr-4 py-3 rounded-lg font-['Work Sans'] text-sm border border-transparent focus:border-primary-container focus:outline-none focus:ring-1 focus:ring-primary-container transition-all" id="email-input" placeholder="artista@estudio.pro" required="" type="email"/>
+</div>
+</div>
+<!-- Field 2: Password -->
+<div class="flex flex-col gap-2">
+<div class="flex items-center justify-between">
+<label class="font-['JetBrains_Mono'] text-xs font-semibold uppercase tracking-wider text-secondary" for="password-input">
+                CONTRASEÑA
+              </label>
+<a class="font-['JetBrains_Mono'] text-xs text-primary hover:text-white transition-colors" href="#">
+                ¿Olvidaste tu contraseña?
+              </a>
+</div>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-3.5 text-secondary/70 text-[20px] pointer-events-none">lock</span>
+<input class="w-full bg-surface-container-highest text-white placeholder:text-secondary/50 pl-11 pr-11 py-3 rounded-lg font-['Work Sans'] text-sm border border-transparent focus:border-primary-container focus:outline-none focus:ring-1 focus:ring-primary-container transition-all" id="password-input" placeholder="••••••••••••" required="" type="password"/>
+<button aria-label="Ver u ocultar contraseña" class="absolute right-3.5 text-secondary hover:text-white transition-colors p-1" onclick="const input = document.getElementById('password-input'); const icon = this.querySelector('span'); if (input.type === 'password') { input.type = 'text'; icon.textContent = 'visibility_off'; } else { input.type = 'password'; icon.textContent = 'visibility'; }" type="button">
+<span class="material-symbols-outlined text-[19px]">visibility</span>
+</button>
+</div>
+</div>
+<!-- Primary CTA Button -->
+<button class="w-full mt-2 bg-primary-container hover:bg-tertiary-container text-white font-['Space_Grotesk'] text-base font-bold uppercase tracking-wide py-3.5 px-6 rounded-lg flex items-center justify-center gap-2 shadow-lg shadow-primary-container/25 hover:shadow-primary-container/40 transition-all duration-200 cursor-pointer" type="submit">
+<span>INICIAR SESIÓN</span>
+<span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+</button>
+<!-- Register Link -->
+<div class="pt-4 border-t border-surface-container-high/60 flex items-center justify-center gap-2 text-center">
+<span class="font-['Work Sans'] text-sm text-secondary">¿No tienes una cuenta aún?</span>
+<a class="font-['JetBrains_Mono'] text-xs uppercase tracking-wider text-primary hover:text-white font-bold transition-colors inline-flex items-center gap-1" href="#">
+              REGÍSTRATE AQUÍ
+              <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+</a>
+</div>
+</form>
+</div>
+<!-- Welcome Message & Badges -->
+<div class="flex flex-col items-center gap-4 text-center">
+<p class="font-['Work Sans'] text-sm text-secondary">
+          Bienvenido a la competencia. ¡Te deseamos mucho éxito!
+        </p>
+<div class="flex items-center justify-center gap-4 text-secondary/60">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-secondary/70">encrypted</span>
+<span class="font-['JetBrains_Mono'] text-[11px] uppercase tracking-wider">CIFRADO DE EXTREMO A EXTREMO</span>
+</div>
+<span class="text-secondary/40">•</span>
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-secondary/70">brush</span>
+<span class="font-['JetBrains_Mono'] text-[11px] uppercase tracking-wider">PROFESIONALIDAD</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="w-full bg-surface-container-lowest py-8 border-t border-surface-container-high">
+<div class="max-w-7xl mx-auto px-6 sm:px-8 flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
+<div class="flex items-center gap-3">
+<img alt="ArtClash Pro Logo" class="h-5 w-auto object-contain opacity-70" src="https://lh3.googleusercontent.com/aida/AEtjO1UQnmYwtCdbCRFd0epQz486nRdJMonT0H-L-Xtt69AWhwokKDwnOgndRx84v1w6eN8kO7_BBo-1YMXG8iEe1T29iO-V-EjLUQMmcosUq3FL-qvAwwM0Qky5FuaT68t6Vsh3hhbAMbw_CmzU3T_j8DJZfr59rhJ4wIy95tfncECQaI276ZFbLu6CZo8N06M7r_2vkk2HTYkz1U_XB1Or4Vpxx-SKfv9d8Yyel4wrWFNOjvBWr1bExqTXB_o"/>
+<span class="font-['JetBrains_Mono'] text-xs text-secondary/70 tracking-wider uppercase">
+          © 2024 ArtClash Pro League. Todos los derechos reservados.
+        </span>
+</div>
+<nav class="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+<a class="font-['JetBrains_Mono'] text-xs text-secondary/70 hover:text-primary transition-colors uppercase tracking-wider" href="#">Reglamento Oficial</a>
+<a class="font-['JetBrains_Mono'] text-xs text-secondary/70 hover:text-primary transition-colors uppercase tracking-wider" href="#">Guías Técnicas de Lienzo</a>
+<a class="font-['JetBrains_Mono'] text-xs text-secondary/70 hover:text-primary transition-colors uppercase tracking-wider" href="#">Criterios de Evaluación</a>
+<a class="font-['JetBrains_Mono'] text-xs text-secondary/70 hover:text-primary transition-colors uppercase tracking-wider" href="#">Términos y Privacidad</a>
+</nav>
+</div>
+</footer>
+</body></html>
