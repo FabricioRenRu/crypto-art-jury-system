@@ -1,8 +1,11 @@
 import json
+import math
 import secrets
 
 EXPONENTE_PUBLICO = 65537
 BITS_LLAVE = 2048
+BITS_MINIMOS_LLAVE = 2048
+MARGEN_DIFERENCIA_PRIMOS = 100
 RONDAS_MILLER_RABIN = 40
 LIMITE_PRIMOS_PEQUENOS = 2000
 
@@ -68,9 +71,11 @@ def es_probable_primo(candidato, rondas=RONDAS_MILLER_RABIN):
 def generar_primo(bits):
     while True:
         candidato = secrets.randbits(bits)
-        # Encender los dos bits mas altos (para que n tenga exactamente 2*bits) y el bit bajo (impar)
+        # Encender los dos bits mas altos (p >= 1.5 * 2^(bits-1) > raiz(2) * 2^(bits-1), como pide FIPS 186-5)
+        # y el bit bajo (impar). Con esto n tiene exactamente 2*bits
         candidato |= (1 << (bits - 1)) | (1 << (bits - 2)) | 1
-        if candidato % EXPONENTE_PUBLICO == 1:
+        # FIPS 186-5: gcd(e, p - 1) = 1
+        if math.gcd(EXPONENTE_PUBLICO, candidato - 1) != 1:
             continue
         if es_probable_primo(candidato):
             return candidato
@@ -90,32 +95,63 @@ def inverso_modular(valor, modulo):
     return coeficiente % modulo
 
 
+def minimo_comun_multiplo(valor_a, valor_b):
+    return valor_a // math.gcd(valor_a, valor_b) * valor_b
+
+
+def par_consistente(llave_publica, llave_privada):
+    # Prueba de consistencia del par: cifrar y descifrar un valor aleatorio con la llave recien generada
+    valor_prueba = secrets.randbelow(llave_publica["n"] - 3) + 2
+    valor_cifrado = pow(valor_prueba, llave_publica["e"], llave_publica["n"])
+    valor_recuperado = pow(valor_cifrado, llave_privada["d"], llave_privada["n"])
+    return valor_recuperado == valor_prueba
+
+
 def generar_par_llaves(bits=BITS_LLAVE):
+    if bits < BITS_MINIMOS_LLAVE:
+        print(f"La llave debe tener al menos {BITS_MINIMOS_LLAVE} bits")
+        return None, None
+
     mitad_bits = bits // 2
+    diferencia_minima = 1 << (mitad_bits - MARGEN_DIFERENCIA_PRIMOS)
+    limite_inferior_d = 1 << mitad_bits
+
     while True:
         primo_p = generar_primo(mitad_bits)
         primo_q = generar_primo(mitad_bits)
-        if primo_p == primo_q:
+
+        # FIPS 186-5: |p - q| > 2^(nlen/2 - 100) (tambien descarta p == q)
+        if abs(primo_p - primo_q) <= diferencia_minima:
             continue
 
         modulo_n = primo_p * primo_q
-        phi_n = (primo_p - 1) * (primo_q - 1)
-        exponente_privado = inverso_modular(EXPONENTE_PUBLICO, phi_n)
-        if exponente_privado is not None and modulo_n.bit_length() == bits:
-            break
 
-    llave_publica = {
-        "n": modulo_n,
-        "e": EXPONENTE_PUBLICO,
-    }
-    llave_privada = {
-        "n": modulo_n,
-        "e": EXPONENTE_PUBLICO,
-        "d": exponente_privado,
-        "p": primo_p,
-        "q": primo_q,
-    }
-    return llave_publica, llave_privada
+        # FIPS 186-5 A.1.1: d = e^-1 mod lambda(n), con lambda(n) = lcm(p - 1, q - 1)
+        lambda_n = minimo_comun_multiplo(primo_p - 1, primo_q - 1)
+        exponente_privado = inverso_modular(EXPONENTE_PUBLICO, lambda_n)
+        if exponente_privado is None:
+            continue
+
+        # FIPS 186-5 A.1.1: d > 2^(nlen/2)
+        if exponente_privado <= limite_inferior_d:
+            continue
+
+        llave_publica = {
+            "n": modulo_n,
+            "e": EXPONENTE_PUBLICO,
+        }
+        llave_privada = {
+            "n": modulo_n,
+            "e": EXPONENTE_PUBLICO,
+            "d": exponente_privado,
+            "p": primo_p,
+            "q": primo_q,
+        }
+
+        if not par_consistente(llave_publica, llave_privada):
+            continue
+
+        return llave_publica, llave_privada
 
 
 def guardar_llave(llave, ruta_archivo):
