@@ -6,6 +6,10 @@ import os
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import sessionmaker, DeclarativeBase, Session
 from dotenv import load_dotenv
+from app.models import Base 
+
+
+
 
 # Cargar variables del archivo .env
 load_dotenv()
@@ -30,6 +34,7 @@ engine: Engine = create_engine(SQLALCHEMY_DATABASE_URL)
 # Crear fabrica de sesiones para hacer consultas
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
+Base.metadata.create_all(bind=engine)
 
 def get_db() -> Generator[Session, None, None]:
     """

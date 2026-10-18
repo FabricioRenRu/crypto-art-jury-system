@@ -3,6 +3,10 @@ from sqlalchemy import Integer, ForeignKey, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
 from app.models.base import Base
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from app.models.pintura import Pintura
+    from app.models.jurado import Jurado
 
 class SobreLlave(Base):
     __tablename__ = "sobres_llave"
@@ -13,8 +17,8 @@ class SobreLlave(Base):
         default=uuid.uuid4,
         server_default=func.gen_random_uuid()
     )
-    id_pintura: Mapped[uuid.UUID] = mapped_column(Integer, ForeignKey("pinturas.id"))
-    id_jurado: Mapped[uuid.UUID] = mapped_column(Integer, ForeignKey("jurados.id"))
+    id_pintura: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("pinturas.id"))
+    id_jurado: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("jurados.id"))
     
     # La llave AES cifrada con el RSA del juez
     llave_aes_cifrada: Mapped[str] = mapped_column(Text, nullable=False)

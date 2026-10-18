@@ -5,7 +5,11 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy import func, String, DateTime, Text
 from datetime import datetime
 from typing import Optional
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from app.models.pintura import Pintura
 
+    
 class Pintor(Base):
     """
     Clase que representa la tabla pintores.
