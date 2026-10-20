@@ -7,7 +7,7 @@ from app.schemas.auth_schemas import LoginRequest, TokenResponse
 
 router: APIRouter = APIRouter(prefix="/api/auth", tags=["auth"])
 
-@router.post("/registro-pintor", response_model=PintorResponse)
+@router.post("/pintores/registro", response_model=PintorResponse)
 def registrar_pintor(
     payload: PintorCreate,
     db: Session = Depends(get_db)

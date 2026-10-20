@@ -16,12 +16,14 @@ def exists_by_email(db: Session, email: str) -> bool:
 def find_by_email(db: Session, email: str) -> Optional[Pintor]:
     return db.query(Pintor).filter(Pintor.email == email).first()
 
-def save(db: Session, payload: PintorCreate) -> Pintor:
+def save(db: Session, payload: PintorCreate, ruta_foto: str) -> Pintor:
     db_pintor = Pintor(
         nombre=payload.nombre,
+        seudonimo=payload.seudonimo,
         email=payload.email,
         contrasena=payload.contrasena,
-        clave_publica_firma=payload.clave_publica_firma
+        clave_publica_ecdsa=payload.clave_publica_ecdsa,
+        foto_perfil=ruta_foto
     )
 
     db.add(db_pintor)

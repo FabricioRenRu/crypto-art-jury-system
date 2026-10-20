@@ -7,6 +7,12 @@ from app.utils.security import get_password_hash, verify_password, create_access
 from app.models.pintor import Pintor
 from app.models.jurado import Jurado
 from typing import Any
+import os
+import base64
+
+# Carpeta para guardar las fotos de Perfil
+os.makedirs("static/avatars", exist_ok=True)
+
 
 
 
@@ -14,24 +20,38 @@ def crear_pintor(db: Session, payload: PintorCreate) -> PintorResponse:
     # Validar que el usuario no exista
     if pintores_repository.exists_by_email(db, payload.email):
         raise EmailYaRegistradoException(payload.email)
-    
-    print(f"==== LONGITUD DEL TEXTO A HASHEAR: {len(payload.contrasena)} ====")
-    print(f"==== CONTENIDO: {payload.contrasena} ====")
+
     # hashear contrasena
     hashed_contrasena: str = get_password_hash(payload.contrasena)
 
     payload.contrasena = hashed_contrasena
 
+    ruta_foto: str = None
+    if payload.foto_perfil_b64 and payload.foto_perfil_b64.startswith("data:image"):
+        # El frontend manda algo como "data:image/png;base64,iVBORw0KGgo..."
+        # Separamos el encabezado de los datos reales
+        cabecera, data_b64 = payload.foto_perfil_b64.split(";base64,")
+        
+        # Extraemos la extensión (png, jpeg, webp)
+        extension: str = cabecera.split("/")[-1] 
+        
+        # Generamos un nombre único y seguro
+        nombre_archivo: str = f"{uuid.uuid4()}.{extension}"
+        ruta_fisica: str = f"static/avatars/{nombre_archivo}"
+        
+        # Decodificamos y guardamos el archivo en el disco duro
+        with open(ruta_fisica, "wb") as archivo_imagen:
+            archivo_imagen.write(base64.b64decode(data_b64))
+            
+        # Guardamos la ruta que irá a la base de datos
+        ruta_foto: str = f"/static/avatars/{nombre_archivo}"
+
     # Guardar en base de datos
-    new_pintor: Pintor = pintores_repository.save(db, payload)
+    new_pintor: Pintor = pintores_repository.save(db, payload, ruta_foto)
 
 
     # Devolver respuesta
-    return PintorResponse(
-        id=new_pintor.id,
-        email=new_pintor.email,
-        clave_publica_firma=new_pintor.clave_publica_firma
-    )
+    return PintorResponse.model_validate(new_pintor)
 
 
 

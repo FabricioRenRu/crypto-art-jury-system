@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field, EmailStr, field_validator
 import re
 import uuid
+from typing import Optional
 
 
 class PintorCreate(BaseModel):
@@ -9,6 +10,8 @@ class PintorCreate(BaseModel):
         max_length=30
     ) 
 
+    seudonimo: str = Field(min_length=3, max_length=50)
+
     email: EmailStr
 
     contrasena: str = Field(
@@ -16,9 +19,11 @@ class PintorCreate(BaseModel):
         max_length=50
     )
 
-    clave_publica_firma: str = Field(
+    clave_publica_ecdsa: str = Field(
         description="Llave publica del pintor en formato PEM"
     )
+
+    foto_perfil_b64: Optional[str] = None
 
     @field_validator("contrasena")
     @classmethod
@@ -36,7 +41,7 @@ class PintorCreate(BaseModel):
         return value
 
 
-    @field_validator("clave_publica_firma")
+    @field_validator("clave_publica_ecdsa")
     @classmethod
     def validate_pem_format(cls, value: str) -> str:
         # 1. Limpiamos espacios o saltos de línea accidentales al inicio/final
@@ -70,7 +75,10 @@ class PintorCreate(BaseModel):
 class PintorResponse(BaseModel):
     id: uuid.UUID
     email: str
-    clave_publica_firma: str
+    clave_publica_ecdsa: str
+
+    class Config:
+        from_attributes = True
     
 
 

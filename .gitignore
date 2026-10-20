@@ -15,7 +15,7 @@ ENV/
 env.bak/
 venv.bak/
 
-# Archivos compilados y cach‚ de Python
+# Archivos compilados y cachï¿½ de Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -29,6 +29,8 @@ htmlcov/
 .env
 .env.*
 !.env.example
+.pem
+*.pem
 
 # Database local (SQLite)
 *.db
@@ -43,11 +45,11 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Compilados de producci¢n de React
+# Compilados de producciï¿½n de React
 dist/
 build/
 
-# Cach‚ de frontend (Vite / Next / SWC)
+# Cachï¿½ de frontend (Vite / Next / SWC)
 .vite/
 .next/
 .cache/
@@ -68,3 +70,11 @@ build/
 # Sistema Operativo
 .DS_Store
 Thumbs.db
+
+
+# ==========================================
+# imagenes
+# ==========================================
+*.jpg
+*.png
+*.bmp

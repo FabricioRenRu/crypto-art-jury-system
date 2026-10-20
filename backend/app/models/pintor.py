@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from app.models.pintura import Pintura
 
-    
+
 class Pintor(Base):
     """
     Clase que representa la tabla pintores.
@@ -28,6 +28,12 @@ class Pintor(Base):
         nullable=False
     )
 
+    seudonimo: Mapped[str] = mapped_column(
+        String(50),
+        unique=True,
+        nullable=False
+    )
+
     email: Mapped[str] = mapped_column(
         String(50),
         unique=True,
@@ -40,9 +46,14 @@ class Pintor(Base):
     )
 
     # Guardamos la llave publica en formato .PEM (texto)
-    clave_publica_firma: Mapped[str] = mapped_column(
+    clave_publica_ecdsa: Mapped[str] = mapped_column(
         Text,
         nullable=False
+    )
+
+    foto_perfil: Mapped[str] = mapped_column(
+        String(255),
+        nullable=True
     )
 
     creado_en: Mapped[datetime] = mapped_column(

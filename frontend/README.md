@@ -18,7 +18,7 @@ corepack enable
 1. Clona o descarga el proyecto y entra a la carpeta:
 
 ```bash
-cd artclash
+cd frontend
 ```
 
 2. Instala las dependencias:
@@ -30,7 +30,7 @@ pnpm install
 3. Levanta el servidor de desarrollo:
 
 ```bash
-pnpm dev
+pnpm run dev
 ```
 
 4. Abre en el navegador la URL que aparece en la terminal (normalmente http://localhost:5173).
@@ -39,7 +39,7 @@ pnpm dev
 
 | Comando        | Qué hace                                          |
 |----------------|---------------------------------------------------|
-| `pnpm dev`     | Servidor de desarrollo con recarga automática     |
+| `pnpm run dev`     | Servidor de desarrollo con recarga automática     |
 | `pnpm build`   | Genera la versión de producción en `dist/`        |
 | `pnpm preview` | Sirve la versión compilada para probarla          |
 

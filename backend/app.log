@@ -818,3 +818,396 @@ Traceback (most recent call last):
     raise CredencialesInvalidasException("No se ha podido autenticar con las credenciales proporcionadas")
 app.exceptions.custom_exceptions.CredencialesInvalidasException: No se ha podido autenticar con las credenciales proporcionadas
 2026-10-17 21:56:42,676 - app.exceptions.exception_handlers - WARNING - Intento de autenticacion con credenciales incorrectas
+2026-10-19 16:21:31,230 - app.exceptions.exception_handlers - ERROR - Error no controlado en /api/auth/pintores/registro: 'clave_publica_firma' is an invalid keyword argument for Pintor
+Traceback (most recent call last):
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\telemetry\_asgi.py", line 151, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 91, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 149, in simple_response
+    await self.app(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\routing.py", line 676, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 2786, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 1817, in handle
+    await self.original_router.handle(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 2869, in handle
+    await included_router._handle_selected(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 1843, in _handle_selected
+    await original_route.handle(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 1308, in handle
+    await effective_context.app(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 165, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 151, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 727, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 362, in run_endpoint_function
+    return await run_in_threadpool(
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+        _run_sync_endpoint, function=dependant.call, arguments=values
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\concurrency.py", line 34, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\anyio\to_thread.py", line 65, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        func, args, abandon_on_cancel=abandon_on_cancel, limiter=limiter
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 2706, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 1100, in run
+    result = context.run(func, *args)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\telemetry\_api.py", line 240, in _run_sync_endpoint
+    return function(**arguments)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\app\routes\auth.py", line 20, in registrar_pintor
+    return auth_service.crear_pintor(db, payload)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\app\services\auth_service.py", line 50, in crear_pintor
+    new_pintor: Pintor = pintores_repository.save(db, payload, ruta_foto)
+                         ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\app\repositories\pintores_repository.py", line 20, in save
+    db_pintor = Pintor(
+        nombre=payload.nombre,
+    ...<4 lines>...
+        foto_perfil_b64=ruta_foto
+    )
+  File "<sqlalchemy generated __init__ for class app.models.pintor.Pintor>", line 4, in __init__
+    return new_state._initialize_instance(self, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\sqlalchemy\orm\state.py", line 597, in _initialize_instance
+    with util.safe_reraise():
+         ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 166, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\sqlalchemy\orm\state.py", line 595, in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\sqlalchemy\orm\decl_base.py", line 2295, in _declarative_constructor
+    raise TypeError(
+        "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+    )
+TypeError: 'clave_publica_firma' is an invalid keyword argument for Pintor
+2026-10-19 16:22:34,128 - app.exceptions.exception_handlers - ERROR - Error no controlado en /api/auth/pintores/registro: 'clave_publica_firma' is an invalid keyword argument for Pintor
+Traceback (most recent call last):
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\telemetry\_asgi.py", line 151, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 91, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 149, in simple_response
+    await self.app(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\routing.py", line 676, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 2786, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 1817, in handle
+    await self.original_router.handle(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 2869, in handle
+    await included_router._handle_selected(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 1843, in _handle_selected
+    await original_route.handle(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 1308, in handle
+    await effective_context.app(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 165, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 151, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 727, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 362, in run_endpoint_function
+    return await run_in_threadpool(
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+        _run_sync_endpoint, function=dependant.call, arguments=values
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\concurrency.py", line 34, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\anyio\to_thread.py", line 65, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        func, args, abandon_on_cancel=abandon_on_cancel, limiter=limiter
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 2706, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 1100, in run
+    result = context.run(func, *args)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\telemetry\_api.py", line 240, in _run_sync_endpoint
+    return function(**arguments)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\app\routes\auth.py", line 20, in registrar_pintor
+    return auth_service.crear_pintor(db, payload)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\app\services\auth_service.py", line 50, in crear_pintor
+    new_pintor: Pintor = pintores_repository.save(db, payload, ruta_foto)
+                         ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\app\repositories\pintores_repository.py", line 20, in save
+    db_pintor = Pintor(
+        nombre=payload.nombre,
+    ...<4 lines>...
+        foto_perfil_b64=ruta_foto
+    )
+  File "<sqlalchemy generated __init__ for class app.models.pintor.Pintor>", line 4, in __init__
+    return new_state._initialize_instance(self, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\sqlalchemy\orm\state.py", line 597, in _initialize_instance
+    with util.safe_reraise():
+         ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 166, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\sqlalchemy\orm\state.py", line 595, in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\sqlalchemy\orm\decl_base.py", line 2295, in _declarative_constructor
+    raise TypeError(
+        "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+    )
+TypeError: 'clave_publica_firma' is an invalid keyword argument for Pintor
+2026-10-19 16:26:10,076 - app.exceptions.exception_handlers - ERROR - Error no controlado en /api/auth/pintores/registro: 'clave_publica_firma' is an invalid keyword argument for Pintor
+Traceback (most recent call last):
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\telemetry\_asgi.py", line 151, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 91, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 149, in simple_response
+    await self.app(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\routing.py", line 676, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 2786, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 1817, in handle
+    await self.original_router.handle(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 2869, in handle
+    await included_router._handle_selected(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 1843, in _handle_selected
+    await original_route.handle(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 1308, in handle
+    await effective_context.app(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 165, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 151, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 727, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 362, in run_endpoint_function
+    return await run_in_threadpool(
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+        _run_sync_endpoint, function=dependant.call, arguments=values
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\concurrency.py", line 34, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\anyio\to_thread.py", line 65, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        func, args, abandon_on_cancel=abandon_on_cancel, limiter=limiter
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 2706, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 1100, in run
+    result = context.run(func, *args)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\telemetry\_api.py", line 240, in _run_sync_endpoint
+    return function(**arguments)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\app\routes\auth.py", line 20, in registrar_pintor
+    return auth_service.crear_pintor(db, payload)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\app\services\auth_service.py", line 50, in crear_pintor
+    new_pintor: Pintor = pintores_repository.save(db, payload, ruta_foto)
+                         ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\app\repositories\pintores_repository.py", line 20, in save
+    db_pintor = Pintor(
+        nombre=payload.nombre,
+    ...<4 lines>...
+        foto_perfil_b64=ruta_foto
+    )
+  File "<sqlalchemy generated __init__ for class app.models.pintor.Pintor>", line 4, in __init__
+    return new_state._initialize_instance(self, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\sqlalchemy\orm\state.py", line 597, in _initialize_instance
+    with util.safe_reraise():
+         ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 166, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\sqlalchemy\orm\state.py", line 595, in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\sqlalchemy\orm\decl_base.py", line 2295, in _declarative_constructor
+    raise TypeError(
+        "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+    )
+TypeError: 'clave_publica_firma' is an invalid keyword argument for Pintor
+2026-10-19 16:27:23,048 - app.exceptions.exception_handlers - ERROR - Error no controlado en /api/auth/pintores/registro: 'foto_perfil_b64' is an invalid keyword argument for Pintor
+Traceback (most recent call last):
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\telemetry\_asgi.py", line 151, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 91, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\middleware\cors.py", line 149, in simple_response
+    await self.app(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\routing.py", line 676, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 2786, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 1817, in handle
+    await self.original_router.handle(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 2869, in handle
+    await included_router._handle_selected(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 1843, in _handle_selected
+    await original_route.handle(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 1308, in handle
+    await effective_context.app(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 165, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 151, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 727, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\routing.py", line 362, in run_endpoint_function
+    return await run_in_threadpool(
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+        _run_sync_endpoint, function=dependant.call, arguments=values
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\starlette\concurrency.py", line 34, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\anyio\to_thread.py", line 65, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        func, args, abandon_on_cancel=abandon_on_cancel, limiter=limiter
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 2706, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 1100, in run
+    result = context.run(func, *args)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\fastapi\telemetry\_api.py", line 240, in _run_sync_endpoint
+    return function(**arguments)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\app\routes\auth.py", line 20, in registrar_pintor
+    return auth_service.crear_pintor(db, payload)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\app\services\auth_service.py", line 50, in crear_pintor
+    new_pintor: Pintor = pintores_repository.save(db, payload, ruta_foto)
+                         ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\app\repositories\pintores_repository.py", line 20, in save
+    db_pintor = Pintor(
+        nombre=payload.nombre,
+    ...<4 lines>...
+        foto_perfil_b64=ruta_foto
+    )
+  File "<sqlalchemy generated __init__ for class app.models.pintor.Pintor>", line 4, in __init__
+    return new_state._initialize_instance(self, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\sqlalchemy\orm\state.py", line 597, in _initialize_instance
+    with util.safe_reraise():
+         ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 166, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\sqlalchemy\orm\state.py", line 595, in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\luish\Documents\SELECTED_TOPICS_CRYPTO\Proyecto\crypto-art-jury-system\backend\venv\Lib\site-packages\sqlalchemy\orm\decl_base.py", line 2295, in _declarative_constructor
+    raise TypeError(
+        "%r is an invalid keyword argument for %s" % (k, cls_.__name__)
+    )
+TypeError: 'foto_perfil_b64' is an invalid keyword argument for Pintor
+2026-10-19 16:29:52,917 - app.exceptions.exception_handlers - WARNING - Intento de registro con email duplicado: luis@gmail.com
+2026-10-19 16:33:55,473 - app.exceptions.exception_handlers - WARNING - Intento de registro con email duplicado: luis@gmail.com
+2026-10-19 17:51:39,082 - app.exceptions.exception_handlers - WARNING - Intento de autenticacion con credenciales incorrectas
+2026-10-19 18:36:11,289 - app.exceptions.exception_handlers - WARNING - Intento de autenticacion con credenciales incorrectas
+2026-10-19 18:36:47,506 - app.exceptions.exception_handlers - WARNING - Intento de autenticacion con credenciales incorrectas

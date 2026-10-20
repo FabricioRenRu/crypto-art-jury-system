@@ -9,17 +9,15 @@
  * El diseño no tiene selector de categoría, por eso se manda DEFAULT_CATEGORY;
  * el seudónimo y la foto se quedan en el formulario hasta que el backend los soporte.
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Icon from '../components/ui/Icon';
 import CryptoTestPanel from '../components/dev/CryptoTestPanel';
 import { useRegisterPainter } from '../hooks/useRegisterPainter';
 import { DEFAULT_AVATAR_URL } from '../data/assets';
 import { PATHS } from '../routes/paths';
 
-/** Categoria enviada al backend mientras el formulario no tenga selector. */
-const DEFAULT_CATEGORY = 'general';
 
 const inputClase =
   'w-full pl-10 pr-3 py-3 rounded-lg bg-surface-container-low text-on-surface font-body-md placeholder:text-secondary/60 focus:outline-none focus:ring-2 focus:ring-primary-container';
@@ -47,6 +45,7 @@ const BENEFITS = [
 
 export default function RegistroPintorPage() {
   const { register, isLoading, error, result } = useRegisterPainter();
+  const navigate = useNavigate();
 
   /** STATE: campos del formulario. */
   const [fullName, setFullName] = useState('');
@@ -74,12 +73,25 @@ export default function RegistroPintorPage() {
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     register({
-      full_name: fullName,
-      email,
-      password,
-      category: DEFAULT_CATEGORY,
+      nombre: fullName,
+      seudonimo: handle,     
+      email: email,
+      contrasena: password,
+      fotoBase64: avatarPreview 
     });
   };
+
+  useEffect(() => {
+    if (result) {
+      // Si hay un resultado exitoso, esperamos 4 segundos y lo mandamos al login
+      const timer = setTimeout(() => {
+        navigate(PATHS.sesion);
+      }, 4000);
+      
+      // Limpieza del timer por seguridad
+      return () => clearTimeout(timer);
+    }
+  }, [result, navigate]);
 
   return (
     <div className="flex flex-col w-full">
@@ -93,7 +105,7 @@ export default function RegistroPintorPage() {
           <div className="mb-space-xl text-left">
             <div className="flex items-center gap-space-xs mb-space-xs">
               <span className="font-label-sm text-label-sm text-primary uppercase tracking-widest bg-surface-container-high px-2 py-1 rounded">
-                Temporada 2025
+                Temporada 2026
               </span>
               <span className="font-label-sm text-label-sm text-secondary">Inscripción Rápida</span>
             </div>
@@ -254,10 +266,15 @@ export default function RegistroPintorPage() {
                   <div className="flex items-start gap-space-sm p-space-sm rounded-lg bg-primary-container/15 border border-primary-container text-on-surface font-body-md text-body-md">
                     <Icon name="check_circle" filled className="text-[22px] text-primary-container" />
                     <div>
-                      <div className="font-title-md text-title-md text-primary">{result.message}</div>
-                      <div className="font-label-md text-label-md text-secondary">
-                        ID anónimo: {result.anonymous_id}
+                      <div className="font-title-md text-title-md text-primary">
+                        ¡Registro completado con éxito!
                       </div>
+                      <div className="font-label-md text-label-md text-secondary mt-1">
+                        ID: <span className="font-mono text-xs">{result.id}</span>
+                      </div>
+                      <p className="text-xs text-primary-container mt-2 font-medium">
+                        ⚠️ Hemos descargado tu Llave Privada (.pem). Guárdala en un lugar seguro. Redirigiendo al inicio de sesión...
+                      </p>
                     </div>
                   </div>
                 )}

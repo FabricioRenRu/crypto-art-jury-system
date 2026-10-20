@@ -12,7 +12,11 @@ import { loadPyodide } from "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodi
 export const Acciones = {
   PROBARCONEXION: "PROBAR_CONEXION",
   GENERAR_RSA: "GENERAR_RSA",
-  GENERAR_AES: "GENERAR_AES"
+  GENERAR_AES: "GENERAR_AES",
+  GENERAR_ECDSA: "GENERAR_ECDSA",
+  INYECCION_LLAVE_PRIVADA: "INYECCION_LLAVE_PRIVADA",
+  FIRMAR_MENSAJE_ECDSA: "FIRMAR_MENSAJE_ECDSA",
+  VERIFICAR_BOVEDA: "VERIFICAR_BOVEDA"
 } as const;
 
 export const Status = {
@@ -35,11 +39,15 @@ async function init() {
   // Obtenemos el codigo fuente como texto
   const rsaCode = await (await fetch('/python/rsa_utils.py')).text();
   const aesCode = await (await fetch('/python/aes_utils.py')).text();
+  const ecdsaCode = await (await fetch('/python/ecdsa_utils.py')).text();
+  const sessionCode = await (await fetch('/python/session_utils.py')).text();
   
   //pyodide.FS.writeFile() escrive el texto/codigo fuente para escribir ese
   //texto en el Sistema de archivos virtual en Memoria (VFS) de Pyodide
   pyodide.FS.writeFile('rsa_utils.py', rsaCode);
   pyodide.FS.writeFile('aes_utils.py', aesCode);
+  pyodide.FS.writeFile('ecdsa_utils.py', ecdsaCode);
+  pyodide.FS.writeFile('session_utils.py', sessionCode);
 
   // Ejecutamos el main
   const mainCode = await (await fetch('/python/main.py')).text();
@@ -60,6 +68,10 @@ self.onmessage = async (e: MessageEvent) => {
     if (accion === Acciones.PROBARCONEXION) fnName = 'probar_conexion';
     else if (accion === Acciones.GENERAR_RSA) fnName = 'generar_rsa';
     else if (accion === Acciones.GENERAR_AES) fnName = 'generar_aes';
+    else if (accion === Acciones.GENERAR_ECDSA) fnName = 'generar_ecdsa_keys';
+    else if (accion === Acciones.INYECCION_LLAVE_PRIVADA) fnName = 'inyectar_llave_privada';
+    else if (accion === Acciones.FIRMAR_MENSAJE_ECDSA) fnName = 'firmar_mensaje';
+    else if (accion === Acciones.VERIFICAR_BOVEDA) fnName = 'verificar_boveda';
 
     if (fnName) {
       //obtenemos la funcion de pyodide
@@ -69,7 +81,7 @@ self.onmessage = async (e: MessageEvent) => {
       //el resultado de la funcion lo convertimos en un formato que typescript entienda
       const resultJS = resultPython.toJs({ dict_converter: Object.fromEntries });
 
-     
+      //Mandamos respuesta a React
       self.postMessage({ id, status: Status.EXITO, data: resultJS });
       
       //Borramos para liberar memoria
