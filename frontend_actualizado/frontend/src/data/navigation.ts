@@ -9,7 +9,6 @@ import { PATHS } from '../routes/paths';
 export const MAIN_NAV: NavItem[] = [
   { label: 'Inicio', path: PATHS.inicio },
   { label: 'Registro Pintor', path: PATHS.registroPintor },
-  { label: 'Registro Jurado', path: PATHS.registroJurado },
   { label: 'Panel Pintor', path: PATHS.panelPintor },
   { label: 'Evaluación Jurado', path: PATHS.evaluacionJurado },
   { label: 'Visto Bueno Presidente', path: PATHS.vistoBuenoPresidente },

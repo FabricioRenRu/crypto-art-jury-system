@@ -44,15 +44,6 @@ export default function Header({ variant = 'competition' }: HeaderProps) {
               ArtClash<span className="text-primary-container ml-0.5">Pro</span>
             </span>
           </Link>
-
-          <div className="hidden xl:flex items-center gap-space-xs bg-surface-container px-space-sm py-1 rounded border border-outline-variant/30">
-            <span className="h-2 w-2 rounded-full bg-primary-container animate-pulse" />
-            {isCompetition && (
-              <span className="font-label-sm text-label-sm uppercase tracking-wider text-primary">
-                FASE EN VIVO: RONDA FINAL
-              </span>
-            )}
-          </div>
         </div>
 
         {/* Menú principal */}
