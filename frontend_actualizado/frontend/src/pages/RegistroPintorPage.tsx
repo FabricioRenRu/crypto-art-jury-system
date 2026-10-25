@@ -273,7 +273,7 @@ export default function RegistroPintorPage() {
                         ID: <span className="font-mono text-xs">{result.id}</span>
                       </div>
                       <p className="text-xs text-primary-container mt-2 font-medium">
-                        ⚠️ Hemos descargado tu Llave Privada (.pem). Guárdala en un lugar seguro. Redirigiendo al inicio de sesión...
+                        ⚠️ Hemos descargado tu Llave Privada (.pem). El servidor NO la guarda: sin este archivo no podrás firmar. Guárdala en un lugar seguro. Redirigiendo al inicio de sesión...
                       </p>
                     </div>
                   </div>

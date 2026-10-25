@@ -72,4 +72,14 @@ async def credenciales_invalidas_exception_handler(request: Request, exc: Creden
     )
 
 
+async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
+    logger.warning(f"{exc.code} en {request.url.path}: {exc.message}")
 
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "status": "error",
+            "code": exc.code,
+            "message": exc.message
+        }
+    )

@@ -5,8 +5,6 @@
 import { useState } from 'react';
 import { authService } from '../services/authService';
 import type { PintorCreate, PintorResponse } from '../types/pintor';
-import { useCryptoWorker } from './useCryptoWorker';
-import { Acciones } from '../workers/crypto.worker';
 import { descargarArchivoTexto } from '../utils/fileUtils';
 
 
@@ -23,41 +21,35 @@ export const useRegisterPainter = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PintorResponse | null>(null);
-  
-  const { estaListo, ejecutarAccion } = useCryptoWorker();
 
   const register = async (formData: FormularioRegistro) => {
-    if (!estaListo) {
-      setError("El motor criptográfico aún no está listo.");
-      return;
-    }
-
     setIsLoading(true);
     setError(null);
     setResult(null);
 
     try {
-      // 1. Worker: Generamos llaves ECDSA en RAM (Milisegundos)
-      const llaves = await ejecutarAccion(Acciones.GENERAR_ECDSA);
-
-      // 2. Armamos el paquete exacto para FastAPI
+      // 1. Armamos el paquete para FastAPI. El par ECDSA lo genera el servidor.
       const payload: PintorCreate = {
         nombre: formData.nombre,
         seudonimo: formData.seudonimo,
         email: formData.email,
         contrasena: formData.contrasena,
-        clave_publica_ecdsa: llaves.public_key, // Formato PEM
         foto_perfil_b64: formData.fotoBase64.startsWith("data:image") ? formData.fotoBase64 : null
       };
 
-      // 3. API: Mandamos a guardar a PostgreSQL
+      // 2. API: Mandamos a guardar a PostgreSQL
       const backendResponse = await authService.registroPintor(payload);
 
-      // 4. ÉXITO (HTTP 200): Descargamos la privada y borramos memoria
+      // 3. ÉXITO: el servidor solo guardó la pública; la privada viene UNA vez en la
+      //    respuesta. La descargamos y no la dejamos en el estado de React.
       const nombreArchivo = `llave_privada_${formData.nombre.replace(/\s+/g, '_').toLowerCase()}.pem`;
-      descargarArchivoTexto(llaves.private_key, nombreArchivo);
+      descargarArchivoTexto(backendResponse.clave_privada_pem, nombreArchivo);
 
-      setResult(backendResponse);
+      setResult({
+        id: backendResponse.id,
+        email: backendResponse.email,
+        clave_publica_ecdsa: backendResponse.clave_publica_ecdsa,
+      });
 
     } catch (err: any) {
       // Si FastAPI devuelve 409 (Email duplicado) o 422 (Validación)

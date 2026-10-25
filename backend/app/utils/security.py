@@ -33,7 +33,8 @@ def create_access_token(
     email: str, 
     tipo_actor: str, 
     rol_especifico: str, 
-    expires_delta: Optional[timedelta] = None
+    expires_delta: Optional[timedelta] = None,
+    jti: Optional[str] = None
 ) -> str:
     """Genera un JWT inyectando el rol y el tipo de actor."""
     expire = datetime.now(timezone.utc) + (
@@ -47,6 +48,9 @@ def create_access_token(
         "rol_especifico": rol_especifico,
         "exp": expire
     }
+    if jti is not None:
+        # Identificador de sesion: enlaza el token con la llave privada en la boveda RAM
+        to_encode["jti"] = jti
     
     encoded_jwt: str = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt

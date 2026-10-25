@@ -25,6 +25,7 @@ import SesionPage from '../pages/SesionPage';
 import RegistroPintorPage from '../pages/RegistroPintorPage';
 import RegistroJuradoPage from '../pages/RegistroJuradoPage';
 import PanelPintorPage from '../pages/PanelPintorPage';
+import RequireVault from '../pages/RequireVault';
 import EvaluacionJuradoPage from '../pages/EvaluacionJuradoPage';
 import VistoBuenoPresidentePage from '../pages/VistoBuenoPresidentePage';
 import ResultadosPage from '../pages/ResultadosPage';
@@ -40,7 +41,7 @@ export default function AppRouter() {
         <Route path={PATHS.sesion} element={<SesionPage />} />
         <Route path={PATHS.registroPintor} element={<RegistroPintorPage />} />
         <Route path={PATHS.registroJurado} element={<RegistroJuradoPage />} />
-        <Route path={PATHS.panelPintor} element={<PanelPintorPage />} />
+        <Route path={PATHS.panelPintor} element={<RequireVault rol="pintor"><PanelPintorPage /></RequireVault>} />
         <Route path={PATHS.evaluacionJurado} element={<EvaluacionJuradoPage />} />
         <Route path={PATHS.vistoBuenoPresidente} element={<VistoBuenoPresidentePage />} />
         <Route path={PATHS.resultados} element={<ResultadosPage />} />

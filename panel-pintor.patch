@@ -1,0 +1,1868 @@
+diff --git a/frontend/.env.example b/frontend/.env.example
+new file mode 100644
+index 0000000..53bd0f8
+--- /dev/null
++++ b/frontend/.env.example
+@@ -0,0 +1,9 @@
++# Copia este archivo a .env y ajusta los valores (el .env no se sube a git).
++
++# URL del backend FastAPI
++VITE_API_URL=http://localhost:8000
++
++# Pintor "en sesión" para el Panel del Pintor (aún no hay login).
++# VITE_PAINTER_ID debe ser el UUID del pintor que ya existe en la tabla `pintores`.
++VITE_PAINTER_ID=00000000-0000-0000-0000-000000000000
++VITE_PAINTER_NAME=Kaelen Voss
+diff --git a/frontend/index.html b/frontend/index.html
+index 0fca6f0..7e80d1b 100644
+--- a/frontend/index.html
++++ b/frontend/index.html
+@@ -1,10 +1,20 @@
+ <!doctype html>
+-<html lang="en">
++<html lang="es" class="dark">
+   <head>
+     <meta charset="UTF-8" />
+     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+-    <title>frontend</title>
++    <title>ArtClash Pro</title>
++    <link rel="preconnect" href="https://fonts.googleapis.com" />
++    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
++    <link
++      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@600;700&family=Work+Sans:wght@400;500;600&display=swap"
++      rel="stylesheet"
++    />
++    <link
++      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
++      rel="stylesheet"
++    />
+   </head>
+   <body>
+     <div id="root"></div>
+diff --git a/frontend/public/python/aes_utils.py b/frontend/public/python/aes_utils.py
+index c59f8b7..595ecec 100644
+--- a/frontend/public/python/aes_utils.py
++++ b/frontend/public/python/aes_utils.py
+@@ -1,12 +1,103 @@
+ """
+ /public/python/aes_utils.py
+-Funciones de prueba para verificar que el worker jale
++Cifrado simetrico de la obra con AES-256-GCM.
++
++Formato del archivo cifrado (el "blob" que se sube al servidor):
++
++    nonce (12 bytes) || texto_cifrado (N bytes) || tag (16 bytes)
++
++- Llave: 32 bytes aleatorios (256 bits). Nunca viaja en claro: en el protocolo final se
++  cifra con la llave publica RSA de cada juez (los "sobres").
++- Nonce: 12 bytes aleatorios (96 bits), nuevo en cada cifrado. Con una llave nueva por obra
++  no hay riesgo de reutilizar el par (llave, nonce).
++- Tag: 16 bytes de autenticacion GCM. Si alguien altera un solo bit del blob, del nonce
++  o del AAD, el descifrado falla en lugar de devolver basura.
++- AAD (datos autenticados adicionales): texto que NO se cifra pero SI se autentica.
++  Debe ser identico al descifrar.
+ """
+-from Crypto.Random import get_random_bytes
+ import base64
++import hashlib
++
++from Crypto.Cipher import AES
++from Crypto.Random import get_random_bytes
++
++TAM_LLAVE = 32
++TAM_NONCE = 12
++TAM_TAG = 16
++
++
++def _a_bytes(valor) -> bytes:
++    """Acepta lo que pueda llegar desde JavaScript (memoryview, JsBuffer, bytes...)."""
++    if isinstance(valor, (bytes, bytearray, memoryview)):
++        return bytes(valor)
++    if hasattr(valor, "to_bytes") and not isinstance(valor, int):  # JsBuffer de Pyodide
++        return valor.to_bytes()
++    if hasattr(valor, "to_py"):
++        return bytes(valor.to_py())
++    return bytes(valor)
++
++
++def _b64(b: bytes) -> str:
++    return base64.b64encode(b).decode("ascii")
++
+ 
+ def generar_aes(payload):
+-    llave_bytes = get_random_bytes(32)
+-    # La convertimos a Base64 para poder mandarla como texto a Javascript
+-    llave_b64 = base64.b64encode(llave_bytes).decode('utf-8')
+-    return { "llave": llave_b64 }
+\ No newline at end of file
++    """Solo genera una llave AES-256 (se mantiene por compatibilidad con la pagina de pruebas)."""
++    return {"llave": _b64(get_random_bytes(TAM_LLAVE))}
++
++
++def cifrar_aes_gcm(payload):
++    """
++    payload: { datos: bytes, aad?: str, llave?: str (Base64, 32 bytes; si falta se genera) }
++    """
++    datos = _a_bytes(payload["datos"])
++    aad = (payload.get("aad") or "").encode("utf-8")
++
++    llave_b64 = payload.get("llave")
++    llave = base64.b64decode(llave_b64) if llave_b64 else get_random_bytes(TAM_LLAVE)
++    if len(llave) != TAM_LLAVE:
++        raise ValueError("La llave AES debe medir exactamente 32 bytes (AES-256).")
++
++    nonce = get_random_bytes(TAM_NONCE)
++    cipher = AES.new(llave, AES.MODE_GCM, nonce=nonce, mac_len=TAM_TAG)
++    cipher.update(aad)
++    texto_cifrado, tag = cipher.encrypt_and_digest(datos)
++
++    blob = nonce + texto_cifrado + tag
++    return {
++        "llave": _b64(llave),
++        "nonce": _b64(nonce),
++        "tag": _b64(tag),
++        "cifrado": blob,
++        "hash_original": hashlib.sha256(datos).hexdigest(),
++        "hash_cifrado": hashlib.sha256(blob).hexdigest(),
++    }
++
++
++def descifrar_aes_gcm(payload):
++    """
++    payload: { cifrado: bytes (blob), llave: str (Base64), aad?: str, solo_hash?: bool }
++    Lanza ValueError si el tag no coincide (archivo, llave o AAD alterados).
++    """
++    blob = _a_bytes(payload["cifrado"])
++    llave = base64.b64decode(payload["llave"])
++    aad = (payload.get("aad") or "").encode("utf-8")
++
++    if len(blob) < TAM_NONCE + TAM_TAG:
++        raise ValueError("El archivo cifrado es demasiado corto.")
++
++    nonce = blob[:TAM_NONCE]
++    tag = blob[-TAM_TAG:]
++    texto_cifrado = blob[TAM_NONCE:-TAM_TAG]
++
++    cipher = AES.new(llave, AES.MODE_GCM, nonce=nonce, mac_len=TAM_TAG)
++    cipher.update(aad)
++    try:
++        datos = cipher.decrypt_and_verify(texto_cifrado, tag)
++    except ValueError:
++        raise ValueError("Autenticacion GCM fallida: el archivo, la llave o el AAD fueron alterados.")
++
++    resultado = {"hash": hashlib.sha256(datos).hexdigest()}
++    if not payload.get("solo_hash"):
++        resultado["datos"] = datos
++    return resultado
+diff --git a/frontend/public/python/ecdsa_utils.py b/frontend/public/python/ecdsa_utils.py
+new file mode 100644
+index 0000000..25d1507
+--- /dev/null
++++ b/frontend/public/python/ecdsa_utils.py
+@@ -0,0 +1,97 @@
++"""
++/public/python/ecdsa_utils.py
++Firma digital del pintor: ECDSA sobre la curva P-256 con SHA-256.
++
++- Las llaves se intercambian en formato PEM (privada: PKCS#8, publica: SubjectPublicKeyInfo).
++- La firma es la concatenacion r||s (64 bytes) codificada en Base64. Es el mismo formato
++  que usa WebCrypto (IEEE P1363), asi que se puede verificar tambien desde el navegador
++  o desde el backend sin convertir nada.
++- Se firma en modo deterministico (RFC 6979): no depende de la calidad del RNG del
++  navegador para elegir el nonce k, y la misma entrada produce la misma firma.
++- La "huella" de una llave publica es el SHA-256 de su DER (SubjectPublicKeyInfo) en hex.
++  Sirve para comparar rapidamente dos llaves publicas sin leer todo el PEM.
++"""
++import base64
++import hashlib
++
++from Crypto.Hash import SHA256
++from Crypto.PublicKey import ECC
++from Crypto.Signature import DSS
++
++CURVA = "P-256"
++
++
++def _huella(llave_publica) -> str:
++    der = llave_publica.export_key(format="DER")
++    return hashlib.sha256(der).hexdigest()
++
++
++def _cargar_privada(pem: str):
++    llave = ECC.import_key(pem.strip())
++    if not llave.has_private():
++        raise ValueError("El PEM recibido no contiene una llave privada.")
++    if CURVA not in llave.curve:
++        raise ValueError(f"La llave debe estar en la curva {CURVA}, no en {llave.curve}.")
++    return llave
++
++
++def _cargar_publica(pem: str):
++    llave = ECC.import_key(pem.strip())
++    if CURVA not in llave.curve:
++        raise ValueError(f"La llave debe estar en la curva {CURVA}, no en {llave.curve}.")
++    return llave.public_key() if llave.has_private() else llave
++
++
++def generar_ecdsa(payload):
++    """Genera un par de llaves ECDSA P-256 nuevo."""
++    llave = ECC.generate(curve=CURVA)
++    publica = llave.public_key()
++    return {
++        "privada": llave.export_key(format="PEM"),
++        "publica": publica.export_key(format="PEM"),
++        "huella": _huella(publica),
++    }
++
++
++def importar_ecdsa(payload):
++    """Carga una llave privada PEM existente y devuelve su llave publica y huella."""
++    llave = _cargar_privada(payload["privada"])
++    publica = llave.public_key()
++    return {
++        "privada": llave.export_key(format="PEM"),
++        "publica": publica.export_key(format="PEM"),
++        "huella": _huella(publica),
++    }
++
++
++def firmar_consentimiento(payload):
++    """
++    Firma el texto del consentimiento (UTF-8 exacto) con la llave privada del pintor.
++    payload: { documento: str, privada: str (PEM) }
++    """
++    llave = _cargar_privada(payload["privada"])
++    datos = payload["documento"].encode("utf-8")
++    h = SHA256.new(datos)
++    firma = DSS.new(llave, "deterministic-rfc6979").sign(h)
++    return {
++        "firma": base64.b64encode(firma).decode("ascii"),
++        "hash_documento": h.hexdigest(),
++        "algoritmo": "ECDSA-P256-SHA256",
++        "huella": _huella(llave.public_key()),
++    }
++
++
++def verificar_firma(payload):
++    """
++    Verifica una firma ECDSA.
++    payload: { documento: str, firma: str (Base64 r||s), publica: str (PEM) }
++    """
++    publica = _cargar_publica(payload["publica"])
++    h = SHA256.new(payload["documento"].encode("utf-8"))
++    try:
++        firma = base64.b64decode(payload["firma"], validate=True)
++        DSS.new(publica, "fips-186-3").verify(h, firma)
++        return {"valida": True}
++    except (ValueError, TypeError):
++        # ValueError: firma invalida o con longitud incorrecta / Base64 mal formado
++        return {"valida": False}
+diff --git a/frontend/public/python/main.py b/frontend/public/python/main.py
+index be6b86d..adedcd2 100644
+--- a/frontend/public/python/main.py
++++ b/frontend/public/python/main.py
+@@ -1,5 +1,6 @@
+ from rsa_utils import generar_rsa
+-from aes_utils import generar_aes
++from aes_utils import generar_aes, cifrar_aes_gcm, descifrar_aes_gcm
++from ecdsa_utils import generar_ecdsa, importar_ecdsa, firmar_consentimiento, verificar_firma
+ 
+ def probar_conexion(payload):
+-    return { "mensaje": "¡Conexión exitosa al main.py!" }
+\ No newline at end of file
++    return { "mensaje": "¡Conexión exitosa al main.py!" }
+diff --git a/frontend/src/components/painter/ArtworkCard.tsx b/frontend/src/components/painter/ArtworkCard.tsx
+new file mode 100644
+index 0000000..f36c358
+--- /dev/null
++++ b/frontend/src/components/painter/ArtworkCard.tsx
+@@ -0,0 +1,80 @@
++/**
++ * components/painter/ArtworkCard.tsx
++ * Tarjeta del "Slot 01 de 01": la obra del pintor, o un espacio vacío si aún no sube ninguna.
++ * (Tarjeta de "Mis Obras en Competencia" del HTML original.)
++ */
++import Icon from '../ui/Icon';
++import type { ObraCifrada } from '../../types/painterPanel';
++
++interface ArtworkCardProps {
++  obra: ObraCifrada | null;
++  onSubir: () => void;
++  onVerDetalles: () => void;
++}
++
++const botonTarjeta =
++  'px-3.5 py-1.5 bg-surface-container hover:bg-surface-bright text-on-surface font-label-sm text-label-sm rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer';
++
++export default function ArtworkCard({ obra, onSubir, onVerDetalles }: ArtworkCardProps) {
++  if (!obra) {
++    return (
++      <div className="bg-surface-container-high rounded-xl overflow-hidden shadow-lg flex flex-col">
++        <div className="w-full h-96 bg-surface-container-lowest flex flex-col items-center justify-center gap-space-sm text-center p-space-lg">
++          <Icon name="add_photo_alternate" className="text-[48px] text-outline" />
++          <span className="font-title-md text-title-md text-on-surface">Slot vacío</span>
++          <span className="font-body-sm text-body-sm text-secondary max-w-[240px]">
++            Sube tu pintura: se cifrará con AES-256-GCM y se firmará tu consentimiento antes de salir del
++            navegador.
++          </span>
++        </div>
++        <div className="p-5 flex items-center justify-between gap-space-md">
++          <span className="font-label-sm text-label-sm text-secondary">Slot 01 de 01</span>
++          <button onClick={onSubir} className={botonTarjeta}>
++            <Icon name="upload" className="text-[16px]" />
++            Subir obra
++          </button>
++        </div>
++      </div>
++    );
++  }
++
++  return (
++    <div className="bg-surface-container-high rounded-xl overflow-hidden shadow-lg transition-all duration-300 hover:shadow-2xl flex flex-col group">
++      <div className="relative w-full h-96 overflow-hidden bg-surface-container-lowest">
++        <div
++          className="w-full h-full bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
++          style={{ backgroundImage: `url("${obra.previewUrl}")` }}
++        />
++        <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-surface-container-lowest/90 backdrop-blur-md px-3 py-1 rounded-full shadow">
++          <Icon name="lock" className="text-[14px] text-tertiary" />
++          <span className="font-label-sm text-label-sm font-semibold text-tertiary uppercase tracking-wider">
++            Cifrada y firmada
++          </span>
++        </div>
++      </div>
++
++      <div className="p-5 flex flex-col justify-between flex-1 gap-space-md">
++        <div className="flex flex-col gap-1">
++          <div className="flex items-center justify-between text-secondary font-label-sm text-label-sm">
++            <span>Slot 01 de 01</span>
++          </div>
++          <h3 className="font-title-lg text-title-lg text-on-surface font-bold">{obra.titulo}</h3>
++          <p className="font-body-sm text-body-sm text-on-surface-variant line-clamp-2 mt-1">
++            {obra.descripcion}
++          </p>
++        </div>
++
++        <div className="flex items-center justify-between pt-3 border-t border-outline-variant/20">
++          <button onClick={onVerDetalles} className={botonTarjeta}>
++            <Icon name="visibility" className="text-[16px]" />
++            Ver detalles
++          </button>
++          <button onClick={onSubir} className={botonTarjeta}>
++            <Icon name="edit" className="text-[16px]" />
++            Editar
++          </button>
++        </div>
++      </div>
++    </div>
++  );
++}
+diff --git a/frontend/src/components/painter/CryptoEvidence.tsx b/frontend/src/components/painter/CryptoEvidence.tsx
+new file mode 100644
+index 0000000..4aff47f
+--- /dev/null
++++ b/frontend/src/components/painter/CryptoEvidence.tsx
+@@ -0,0 +1,220 @@
++/**
++ * components/painter/CryptoEvidence.tsx
++ * Muestra, en la interfaz, el resultado del cifrado AES-256-GCM y de la firma ECDSA:
++ * tamaños, hashes, nonce, tag, bytes cifrados, consentimiento firmado y verificaciones.
++ * Incluye dos pruebas de integridad (alterar el archivo / el consentimiento).
++ */
++import { useState } from 'react';
++import type { ReactNode } from 'react';
++import Icon from '../ui/Icon';
++import { usePainterCrypto } from '../../hooks/usePainterCrypto';
++import { acortar, copiar, descargar, formatearBytes, vistaHex } from '../../lib/formato';
++import type { ObraCifrada, ResultadoPrueba } from '../../types/painterPanel';
++
++interface CryptoEvidenceProps {
++  obra: ObraCifrada;
++}
++
++function Fila({ etiqueta, children }: { etiqueta: string; children: ReactNode }) {
++  return (
++    <div className="flex flex-col md:flex-row md:items-start gap-1 md:gap-space-md py-2">
++      <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider md:w-44 shrink-0">
++        {etiqueta}
++      </span>
++      <span className="font-label-md text-label-md text-on-surface break-all">{children}</span>
++    </div>
++  );
++}
++
++function Sello({ ok, texto }: { ok: boolean; texto: string }) {
++  return (
++    <span
++      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-label-sm text-label-sm uppercase tracking-wider ${
++        ok ? 'bg-primary-container/15 text-primary' : 'bg-error-container text-on-error-container'
++      }`}
++    >
++      <Icon name={ok ? 'check_circle' : 'cancel'} className="text-[16px]" />
++      {texto}
++    </span>
++  );
++}
++
++const boton =
++  'px-3.5 py-2 bg-surface-container hover:bg-surface-bright text-on-surface font-label-sm text-label-sm rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed';
++
++export default function CryptoEvidence({ obra }: CryptoEvidenceProps) {
++  const { probarAlteracionCifrado, probarAlteracionConsentimiento } = usePainterCrypto();
++  const [verLlave, setVerLlave] = useState(false);
++  const [pruebaCifrado, setPruebaCifrado] = useState<ResultadoPrueba | null>(null);
++  const [pruebaConsent, setPruebaConsent] = useState<ResultadoPrueba | null>(null);
++  const [probando, setProbando] = useState(false);
++
++  const correr = async (
++    fn: (o: ObraCifrada) => Promise<ResultadoPrueba>,
++    guardar: (r: ResultadoPrueba) => void,
++  ) => {
++    setProbando(true);
++    try {
++      guardar(await fn(obra));
++    } finally {
++      setProbando(false);
++    }
++  };
++
++  const c = obra.consentimiento;
++  const sobrecarga = obra.cifrado.length - obra.tamanoOriginal;
++
++  return (
++    <section id="evidencia-cripto" className="flex flex-col gap-space-lg scroll-mt-28">
++      <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-sm">
++        <div className="flex items-center gap-space-xs">
++          <Icon name="enhanced_encryption" className="text-primary text-[24px]" />
++          <h2 className="font-headline-sm text-headline-sm text-on-surface font-bold">Evidencia criptográfica</h2>
++        </div>
++        <div className="flex flex-wrap gap-space-sm">
++          <Sello ok texto="AES-256-GCM" />
++          <Sello ok={obra.verificaciones.descifradoCoincide} texto="Descifrado = original" />
++          <Sello ok={obra.verificaciones.firmaValida} texto="Firma ECDSA válida" />
++        </div>
++      </div>
++
++      <div className="grid grid-cols-1 lg:grid-cols-2 gap-space-lg">
++        {/* ---------- Cifrado ---------- */}
++        <div className="bg-surface-container-high rounded-xl p-space-lg flex flex-col gap-space-sm shadow-lg">
++          <h3 className="font-title-lg text-title-lg text-on-surface font-bold flex items-center gap-2">
++            <Icon name="lock" className="text-primary text-[22px]" /> Obra cifrada
++          </h3>
++          <div className="divide-y divide-outline-variant/20">
++            <Fila etiqueta="Archivo">{obra.nombreArchivo} ({obra.tipoMime})</Fila>
++            <Fila etiqueta="Tamaño">
++              {formatearBytes(obra.tamanoOriginal)} → {formatearBytes(obra.cifrado.length)} (+{sobrecarga} B: nonce 12 + tag 16)
++            </Fila>
++            <Fila etiqueta="SHA-256 original">{obra.hashOriginal}</Fila>
++            <Fila etiqueta="SHA-256 cifrado">{obra.hashCifrado}</Fila>
++            <Fila etiqueta="Nonce (96 bits)">{obra.nonce}</Fila>
++            <Fila etiqueta="Tag GCM (128 bits)">{obra.tag}</Fila>
++            <Fila etiqueta="Llave AES-256">
++              <span className="flex flex-wrap items-center gap-space-sm">
++                <span>{verLlave ? obra.llaveAes : '•'.repeat(44)}</span>
++                <button className="text-primary underline" onClick={() => setVerLlave((v) => !v)}>
++                  {verLlave ? 'ocultar' : 'mostrar'}
++                </button>
++                <button className="text-primary underline" onClick={() => copiar(obra.llaveAes)}>copiar</button>
++              </span>
++            </Fila>
++          </div>
++          <p className="font-body-sm text-body-sm text-secondary flex items-start gap-2">
++            <Icon name="info" className="text-[16px] mt-0.5" />
++            La llave se muestra solo para la demostración. En el protocolo final se cifra con la llave RSA de cada juez
++            (sobres) y no se conserva en claro.
++          </p>
++
++          <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider mt-2">
++            Primeros 96 bytes del archivo cifrado (hex)
++          </span>
++          <pre className="bg-surface-container-lowest text-primary p-space-sm rounded-lg font-label-md text-label-md overflow-auto">
++            {vistaHex(obra.cifrado)}
++          </pre>
++
++          <div className="flex flex-wrap gap-space-sm pt-1">
++            <button
++              className={boton}
++              onClick={() => descargar(`${obra.nombreArchivo}.enc`, obra.cifrado, 'application/octet-stream')}
++            >
++              <Icon name="download" className="text-[16px]" /> Descargar .enc
++            </button>
++          </div>
++        </div>
++
++        {/* ---------- Consentimiento ---------- */}
++        <div className="bg-surface-container-high rounded-xl p-space-lg flex flex-col gap-space-sm shadow-lg">
++          <h3 className="font-title-lg text-title-lg text-on-surface font-bold flex items-center gap-2">
++            <Icon name="draw" className="text-primary text-[22px]" /> Consentimiento firmado
++          </h3>
++          <div className="divide-y divide-outline-variant/20">
++            <Fila etiqueta="Algoritmo">{c.algoritmo} (firma r‖s, 64 bytes)</Fila>
++            <Fila etiqueta="Huella firmante">{acortar(c.huellaFirmante, 16, 12)}</Fila>
++            <Fila etiqueta="SHA-256 documento">{c.hashDocumento}</Fila>
++            <Fila etiqueta="Firma (Base64)">{c.firma}</Fila>
++          </div>
++
++          <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider mt-2">
++            Documento firmado (texto exacto)
++          </span>
++          <pre className="bg-surface-container-lowest text-on-surface-variant p-space-sm rounded-lg font-label-md text-label-md overflow-auto max-h-72">
++            {c.documento}
++          </pre>
++
++          <div className="flex flex-wrap gap-space-sm pt-1">
++            <button
++              className={boton}
++              onClick={() =>
++                descargar(
++                  'consentimiento_firmado.json',
++                  JSON.stringify(
++                    {
++                      documento_consentimiento: c.documento,
++                      firma_consentimiento: c.firma,
++                      algoritmo: c.algoritmo,
++                      clave_publica_firma: c.clavePublica,
++                    },
++                    null,
++                    2,
++                  ),
++                  'application/json',
++                )
++              }
++            >
++              <Icon name="download" className="text-[16px]" /> Descargar consentimiento
++            </button>
++            <button className={boton} onClick={() => copiar(c.firma)}>
++              <Icon name="content_copy" className="text-[16px]" /> Copiar firma
++            </button>
++          </div>
++        </div>
++      </div>
++
++      {/* ---------- Pruebas de integridad ---------- */}
++      <div className="bg-surface-container-high rounded-xl p-space-lg flex flex-col gap-space-md shadow-lg">
++        <h3 className="font-title-lg text-title-lg text-on-surface font-bold flex items-center gap-2">
++          <Icon name="science" className="text-primary text-[22px]" /> Pruebas de integridad
++        </h3>
++        <p className="font-body-sm text-body-sm text-on-surface-variant">
++          Altera un dato a propósito y comprueba que el sistema lo detecta.
++        </p>
++        <div className="grid grid-cols-1 md:grid-cols-2 gap-space-md">
++          <div className="flex flex-col gap-space-sm bg-surface-container rounded-lg p-space-md">
++            <button
++              className={`${boton} self-start`}
++              disabled={probando}
++              onClick={() => correr(probarAlteracionCifrado, setPruebaCifrado)}
++            >
++              <Icon name="edit_off" className="text-[16px]" /> Alterar 1 byte del archivo cifrado
++            </button>
++            {pruebaCifrado && (
++              <p className={`font-body-sm text-body-sm flex items-start gap-2 ${pruebaCifrado.detectada ? 'text-primary' : 'text-error'}`}>
++                <Icon name={pruebaCifrado.detectada ? 'verified_user' : 'warning'} className="text-[18px]" />
++                {pruebaCifrado.mensaje}
++              </p>
++            )}
++          </div>
++          <div className="flex flex-col gap-space-sm bg-surface-container rounded-lg p-space-md">
++            <button
++              className={`${boton} self-start`}
++              disabled={probando}
++              onClick={() => correr(probarAlteracionConsentimiento, setPruebaConsent)}
++            >
++              <Icon name="edit_off" className="text-[16px]" /> Alterar el consentimiento firmado
++            </button>
++            {pruebaConsent && (
++              <p className={`font-body-sm text-body-sm flex items-start gap-2 ${pruebaConsent.detectada ? 'text-primary' : 'text-error'}`}>
++                <Icon name={pruebaConsent.detectada ? 'verified_user' : 'warning'} className="text-[18px]" />
++                {pruebaConsent.mensaje}
++              </p>
++            )}
++          </div>
++        </div>
++      </div>
++    </section>
++  );
++}
+diff --git a/frontend/src/components/painter/PainterBanner.tsx b/frontend/src/components/painter/PainterBanner.tsx
+new file mode 100644
+index 0000000..df5a2da
+--- /dev/null
++++ b/frontend/src/components/painter/PainterBanner.tsx
+@@ -0,0 +1,55 @@
++/**
++ * components/painter/PainterBanner.tsx
++ * Franja superior del panel: avatar, nombre del pintor y botón "Subir Nueva Pintura".
++ * (Sección "Profile & Quota Header Banner" del HTML original.)
++ */
++import Icon from '../ui/Icon';
++
++interface PainterBannerProps {
++  nombre: string;
++  avatarUrl: string;
++  onSubir: () => void;
++}
++
++export default function PainterBanner({ nombre, avatarUrl, onSubir }: PainterBannerProps) {
++  return (
++    <section className="w-full bg-surface-container-low px-gutter py-space-lg relative overflow-hidden">
++      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-space-md relative z-10">
++        <div className="flex items-center gap-space-md">
++          <div className="relative">
++            <div
++              className="w-16 h-16 rounded-xl bg-cover bg-center ring-2 ring-primary-container/60 shadow-lg"
++              style={{ backgroundImage: `url("${avatarUrl}")` }}
++            />
++            <span className="absolute -bottom-1 -right-1 bg-surface-container-highest text-primary font-label-sm text-label-sm px-1 py-0.5 rounded shadow flex items-center gap-0.5">
++              <Icon name="verified" className="text-[14px]" />
++            </span>
++          </div>
++          <div className="flex flex-col">
++            <div className="flex items-center gap-space-xs flex-wrap">
++              <h1 className="font-headline-md text-headline-md text-on-surface font-bold tracking-tight">
++                {nombre}
++              </h1>
++              <span className="bg-primary-container/15 text-primary font-label-sm text-label-sm px-2 py-0.5 rounded uppercase tracking-wider font-semibold">
++                Artista Verificado
++              </span>
++            </div>
++            <p className="font-body-sm text-body-sm text-secondary mt-0.5">
++              Torneo Internacional ArtClash Pro 2024
++            </p>
++          </div>
++        </div>
++
++        <div className="flex items-center gap-space-md shrink-0 w-full md:w-auto justify-end">
++          <button
++            onClick={onSubir}
++            className="inline-flex items-center justify-center gap-space-xs px-6 py-3 bg-primary-container hover:bg-tertiary-container text-on-primary font-label-md text-label-md uppercase tracking-wider rounded-xl transition-all shadow-[0_0_20px_rgba(255,107,0,0.35)] font-bold cursor-pointer"
++          >
++            <Icon name="add" className="text-[20px]" />
++            <span>Subir Nueva Pintura</span>
++          </button>
++        </div>
++      </div>
++    </section>
++  );
++}
+diff --git a/frontend/src/components/painter/SigningKeyCard.tsx b/frontend/src/components/painter/SigningKeyCard.tsx
+new file mode 100644
+index 0000000..24b797a
+--- /dev/null
++++ b/frontend/src/components/painter/SigningKeyCard.tsx
+@@ -0,0 +1,143 @@
++/**
++ * components/painter/SigningKeyCard.tsx
++ * Muestra y administra la llave de firma ECDSA P-256 del pintor.
++ *
++ * - "Generar": crea un par nuevo en el navegador (Python/Pyodide).
++ * - "Importar": carga la llave privada PEM que ya se tenga (p. ej. la del pintor registrado
++ *   en la BD) y calcula su llave pública y su huella.
++ * La llave privada nunca se envía a ningún lado; solo se puede descargar a mano.
++ */
++import { useRef } from 'react';
++import Icon from '../ui/Icon';
++import { agruparHex, copiar, descargar } from '../../lib/formato';
++import type { LlavesFirma } from '../../types/painterPanel';
++
++interface SigningKeyCardProps {
++  llaves: LlavesFirma | null;
++  motorListo: boolean;
++  ocupado: boolean;
++  error: string | null;
++  onGenerar: () => void;
++  onImportar: (archivo: File) => void;
++}
++
++const botonSecundario =
++  'px-3.5 py-2 bg-surface-container hover:bg-surface-bright text-on-surface font-label-sm text-label-sm rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed';
++
++export default function SigningKeyCard({
++  llaves,
++  motorListo,
++  ocupado,
++  error,
++  onGenerar,
++  onImportar,
++}: SigningKeyCardProps) {
++  const inputRef = useRef<HTMLInputElement>(null);
++  const bloqueado = !motorListo || ocupado;
++
++  return (
++    <section className="bg-surface-container-high rounded-xl p-space-lg flex flex-col gap-space-md shadow-lg">
++      <div className="flex flex-col md:flex-row md:items-start justify-between gap-space-md">
++        <div className="flex items-start gap-space-sm">
++          <div className="w-10 h-10 rounded-lg bg-primary-container/20 text-primary-container flex items-center justify-center shrink-0">
++            <Icon name="key" className="text-[22px]" />
++          </div>
++          <div className="flex flex-col">
++            <h2 className="font-headline-sm text-headline-sm text-on-surface font-bold">
++              Llave de firma (ECDSA P-256)
++            </h2>
++            <p className="font-body-sm text-body-sm text-on-surface-variant max-w-2xl mt-1">
++              Con esta llave firmas tu consentimiento. La pública es la que el servidor guarda en{' '}
++              <code className="font-label-sm text-label-sm text-primary">clave_publica_firma</code>; la privada
++              nunca sale de tu navegador.
++            </p>
++          </div>
++        </div>
++
++        <span
++          className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-label-sm text-label-sm uppercase tracking-wider ${
++            motorListo ? 'bg-surface-container text-primary' : 'bg-surface-container text-secondary'
++          }`}
++        >
++          <span
++            className={`w-2 h-2 rounded-full ${motorListo ? 'bg-primary-container' : 'bg-tertiary animate-pulse'}`}
++          />
++          {motorListo ? 'Motor Python listo' : 'Cargando Python…'}
++        </span>
++      </div>
++
++      {llaves ? (
++        <div className="flex flex-col gap-space-sm bg-surface-container rounded-lg p-space-md">
++          <div className="flex flex-wrap items-center gap-space-sm">
++            <span className="font-label-sm text-label-sm uppercase tracking-wider text-primary bg-primary-container/15 px-2 py-0.5 rounded">
++              {llaves.origen === 'generada' ? 'Generada aquí' : 'Importada'}
++            </span>
++            <span className="font-label-sm text-label-sm text-secondary uppercase">Huella SHA-256</span>
++          </div>
++          <p className="font-label-md text-label-md text-on-surface break-all">
++            {agruparHex(llaves.huella.slice(0, 32))} …
++          </p>
++          <details className="group">
++            <summary className="cursor-pointer font-label-sm text-label-sm text-primary uppercase tracking-wider select-none">
++              Ver llave pública (PEM)
++            </summary>
++            <pre className="mt-2 bg-surface-container-lowest text-on-surface-variant p-space-sm rounded-lg font-label-md text-label-md overflow-auto">
++              {llaves.publica}
++            </pre>
++          </details>
++          <div className="flex flex-wrap gap-space-sm pt-1">
++            <button className={botonSecundario} onClick={() => copiar(llaves.publica)}>
++              <Icon name="content_copy" className="text-[16px]" />
++              Copiar pública
++            </button>
++            <button
++              className={botonSecundario}
++              onClick={() => descargar('llave_privada_pintor.pem', llaves.privada, 'application/x-pem-file')}
++            >
++              <Icon name="download" className="text-[16px]" />
++              Descargar privada
++            </button>
++          </div>
++        </div>
++      ) : (
++        <p className="font-body-sm text-body-sm text-secondary bg-surface-container rounded-lg p-space-md">
++          Aún no hay llave de firma cargada. Genera una nueva, o importa la llave privada del pintor registrado
++          para que la firma coincida con la llave pública guardada en la base de datos.
++        </p>
++      )}
++
++      {error && (
++        <p className="flex items-start gap-2 font-body-sm text-body-sm text-error">
++          <Icon name="error" className="text-[18px]" />
++          {error}
++        </p>
++      )}
++
++      <div className="flex flex-wrap gap-space-sm">
++        <button
++          onClick={onGenerar}
++          disabled={bloqueado}
++          className="px-4 py-2 bg-primary-container hover:bg-tertiary-container text-on-primary font-label-md text-label-md uppercase tracking-wider rounded-lg transition-all font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
++        >
++          <Icon name="vpn_key" className="text-[18px]" />
++          {llaves ? 'Generar otra' : 'Generar par de llaves'}
++        </button>
++        <button onClick={() => inputRef.current?.click()} disabled={bloqueado} className={botonSecundario}>
++          <Icon name="upload_file" className="text-[16px]" />
++          Importar privada (.pem)
++        </button>
++        <input
++          ref={inputRef}
++          type="file"
++          accept=".pem,.key,text/plain"
++          className="hidden"
++          onChange={(e) => {
++            const archivo = e.target.files?.[0];
++            if (archivo) onImportar(archivo);
++            e.target.value = ''; // permite volver a elegir el mismo archivo
++          }}
++        />
++      </div>
++    </section>
++  );
++}
+diff --git a/frontend/src/components/painter/UploadModal.tsx b/frontend/src/components/painter/UploadModal.tsx
+new file mode 100644
+index 0000000..36f3ae0
+--- /dev/null
++++ b/frontend/src/components/painter/UploadModal.tsx
+@@ -0,0 +1,324 @@
++/**
++ * components/painter/UploadModal.tsx
++ * Modal "Subir Pintura Digital" (arrastrar y soltar, título, memoria descriptiva y declaración).
++ *
++ * Al confirmar NO sube nada: entrega los datos a la página, que cifra el archivo (AES-256-GCM)
++ * y firma el consentimiento (ECDSA). Mientras eso ocurre se muestra el avance por pasos.
++ * El formulario vive en un componente interno para que su estado se reinicie al cerrar el modal.
++ */
++import { useEffect, useRef, useState } from 'react';
++import type { DragEvent } from 'react';
++import Icon from '../ui/Icon';
++import { formatearBytes } from '../../lib/formato';
++import type { PasoProceso } from '../../types/painterPanel';
++
++const MAX_BYTES = 40 * 1024 * 1024; // 40 MB: el archivo se copia varias veces en memoria WASM
++const MAX_PALABRAS = 500;
++
++export interface DatosFormulario {
++  archivo: File;
++  titulo: string;
++  descripcion: string;
++}
++
++interface UploadModalProps {
++  abierto: boolean;
++  procesando: PasoProceso | null;
++  error: string | null;
++  /** Texto que explica por qué no se puede firmar todavía (sin llave, motor cargando…). */
++  bloqueo: string | null;
++  onCerrar: () => void;
++  onEnviar: (datos: DatosFormulario) => void;
++}
++
++const PASOS: { id: PasoProceso; texto: string }[] = [
++  { id: 'cifrando', texto: 'Cifrando la obra con AES-256-GCM' },
++  { id: 'firmando', texto: 'Firmando el consentimiento con ECDSA P-256' },
++  { id: 'verificando', texto: 'Verificando firma y descifrado' },
++];
++
++const campo =
++  'bg-surface-container px-4 py-3 rounded-lg text-on-surface placeholder:text-secondary font-body-md text-body-md focus:outline-none focus:ring-2 focus:ring-primary-container shadow-inner w-full';
++const etiqueta = 'font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-medium';
++
++export default function UploadModal(props: UploadModalProps) {
++  if (!props.abierto) return null;
++  return <FormularioSubida {...props} />;
++}
++
++function FormularioSubida({ procesando, error, bloqueo, onCerrar, onEnviar }: UploadModalProps) {
++  const [archivo, setArchivo] = useState<File | null>(null);
++  const [miniatura, setMiniatura] = useState<string | null>(null);
++  const [titulo, setTitulo] = useState('');
++  const [descripcion, setDescripcion] = useState('');
++  const [aceptado, setAceptado] = useState(false);
++  const [arrastrando, setArrastrando] = useState(false);
++  const [errorArchivo, setErrorArchivo] = useState<string | null>(null);
++  const inputRef = useRef<HTMLInputElement>(null);
++  const miniaturaRef = useRef<string | null>(null);
++
++  const ocupado = procesando !== null;
++  const palabras = descripcion.trim() ? descripcion.trim().split(/\s+/).length : 0;
++
++  // Cerrar con Escape (salvo mientras se cifra)
++  useEffect(() => {
++    const onKey = (e: KeyboardEvent) => {
++      if (e.key === 'Escape' && !ocupado) onCerrar();
++    };
++    window.addEventListener('keydown', onKey);
++    return () => window.removeEventListener('keydown', onKey);
++  }, [ocupado, onCerrar]);
++
++  // Libera la URL de la miniatura al cerrar el modal
++  useEffect(
++    () => () => {
++      if (miniaturaRef.current) URL.revokeObjectURL(miniaturaRef.current);
++    },
++    [],
++  );
++
++  const elegir = (f: File | undefined) => {
++    setErrorArchivo(null);
++    if (!f) return;
++    if (!f.type.startsWith('image/')) return setErrorArchivo('El archivo debe ser una imagen (JPG, PNG…).');
++    if (f.size > MAX_BYTES) return setErrorArchivo(`El archivo supera ${formatearBytes(MAX_BYTES)}.`);
++    // Miniatura local del archivo elegido (se libera la anterior, si había)
++    if (miniaturaRef.current) URL.revokeObjectURL(miniaturaRef.current);
++    miniaturaRef.current = URL.createObjectURL(f);
++    setMiniatura(miniaturaRef.current);
++    setArchivo(f);
++  };
++
++  const alSoltar = (e: DragEvent) => {
++    e.preventDefault();
++    setArrastrando(false);
++    elegir(e.dataTransfer.files?.[0]);
++  };
++
++  const puedeEnviar =
++    !!archivo && titulo.trim() !== '' && descripcion.trim() !== '' && palabras <= MAX_PALABRAS && aceptado && !ocupado && !bloqueo;
++
++  return (
++    <div
++      className="fixed inset-0 z-50 overflow-y-auto bg-surface-container-lowest/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 lg:p-10"
++      role="dialog"
++      aria-modal="true"
++      aria-labelledby="upload-modal-title"
++    >
++      <div className="bg-surface-container-high w-full max-w-3xl rounded-xl shadow-2xl overflow-hidden flex flex-col relative my-auto">
++        {/* Encabezado */}
++        <div className="p-space-lg bg-surface-container flex items-center justify-between">
++          <div className="flex items-center gap-space-sm">
++            <div className="w-10 h-10 rounded-lg bg-primary-container text-on-primary flex items-center justify-center shadow">
++              <Icon name="upload_file" className="text-[22px]" />
++            </div>
++            <div className="flex flex-col">
++              <h2 id="upload-modal-title" className="font-headline-sm text-headline-sm text-on-surface font-bold">
++                Subir Pintura Digital
++              </h2>
++              <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider">
++                Slot 01 de 01 • ArtClash Convocatoria Oficial
++              </span>
++            </div>
++          </div>
++          <button
++            aria-label="Cerrar modal"
++            onClick={onCerrar}
++            disabled={ocupado}
++            className="w-9 h-9 rounded-lg bg-surface-container-highest hover:bg-surface-bright text-on-surface flex items-center justify-center transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
++          >
++            <Icon name="close" className="text-[20px]" />
++          </button>
++        </div>
++
++        <form
++          className="p-space-lg flex flex-col gap-space-lg"
++          onSubmit={(e) => {
++            e.preventDefault();
++            if (puedeEnviar && archivo) onEnviar({ archivo, titulo: titulo.trim(), descripcion: descripcion.trim() });
++          }}
++        >
++          {/* Zona de arrastrar y soltar */}
++          <div className="flex flex-col gap-2">
++            <label className="font-label-md text-label-md text-on-surface uppercase tracking-wider font-semibold">
++              Archivo Maestro de Alta Resolución
++            </label>
++            <div
++              role="button"
++              tabIndex={0}
++              onClick={() => inputRef.current?.click()}
++              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && inputRef.current?.click()}
++              onDragEnter={(e) => { e.preventDefault(); setArrastrando(true); }}
++              onDragOver={(e) => { e.preventDefault(); setArrastrando(true); }}
++              onDragLeave={(e) => { e.preventDefault(); setArrastrando(false); }}
++              onDrop={alSoltar}
++              className={`relative group rounded-xl p-8 flex flex-col items-center justify-center text-center transition-all cursor-pointer min-h-[180px] ${
++                arrastrando ? 'bg-surface-container-highest' : 'bg-surface-container-low hover:bg-surface-container'
++              }`}
++            >
++              {/* Contorno punteado con SVG (el diseño evita clases de borde de Tailwind) */}
++              <svg className="absolute inset-0 w-full h-full pointer-events-none rounded-xl" xmlns="http://www.w3.org/2000/svg">
++                <rect
++                  className="group-hover:stroke-primary transition-colors"
++                  fill="none"
++                  height="calc(100% - 4px)"
++                  rx="12"
++                  stroke="#5a4136"
++                  strokeDasharray="6 6"
++                  strokeWidth="2"
++                  width="calc(100% - 4px)"
++                  x="2"
++                  y="2"
++                />
++              </svg>
++
++              {archivo && miniatura ? (
++                <div className="flex items-center gap-space-md">
++                  <img src={miniatura} alt="Vista previa" className="w-24 h-24 object-cover rounded-lg shadow" />
++                  <div className="flex flex-col items-start text-left">
++                    <span className="font-title-md text-title-md text-on-surface font-semibold break-all">{archivo.name}</span>
++                    <span className="font-label-sm text-label-sm text-secondary">
++                      {archivo.type} • {formatearBytes(archivo.size)}
++                    </span>
++                    <span className="font-body-sm text-body-sm text-primary underline mt-1">Cambiar archivo</span>
++                  </div>
++                </div>
++              ) : (
++                <>
++                  <Icon name="cloud_upload" className="text-[44px] text-primary group-hover:scale-110 transition-transform mb-2" />
++                  <span className="font-title-md text-title-md text-on-surface font-semibold">
++                    Arrastra y suelta tu lienzo maestro aquí
++                  </span>
++                  <span className="font-body-sm text-body-sm text-secondary mt-1">
++                    o <span className="text-primary underline">explora tus archivos locales</span>
++                  </span>
++                  <span className="font-label-sm text-label-sm text-outline mt-3">
++                    Soporta JPG, PNG, entre otros sin compresión (máx. {formatearBytes(MAX_BYTES)})
++                  </span>
++                </>
++              )}
++            </div>
++            <input
++              ref={inputRef}
++              type="file"
++              accept="image/*"
++              className="hidden"
++              onChange={(e) => {
++                elegir(e.target.files?.[0]);
++                e.target.value = '';
++              }}
++            />
++            {errorArchivo && <p className="font-body-sm text-body-sm text-error">{errorArchivo}</p>}
++          </div>
++
++          {/* Título */}
++          <div className="flex flex-col gap-1.5 w-full">
++            <label className={etiqueta} htmlFor="titulo-obra">Título de la Obra *</label>
++            <input
++              id="titulo-obra"
++              className={campo}
++              placeholder="Ej. El Despertar del Leviatán"
++              type="text"
++              required
++              value={titulo}
++              onChange={(e) => setTitulo(e.target.value)}
++            />
++          </div>
++
++          {/* Memoria descriptiva */}
++          <div className="flex flex-col gap-1.5">
++            <div className="flex items-center justify-between">
++              <label className={etiqueta} htmlFor="memoria-obra">Memoria Descriptiva / Concepto de la Pieza *</label>
++              <span className={`font-label-sm text-label-sm ${palabras > MAX_PALABRAS ? 'text-error' : 'text-secondary'}`}>
++                {palabras} / {MAX_PALABRAS} palabras
++              </span>
++            </div>
++            <textarea
++              id="memoria-obra"
++              className={`${campo} resize-none`}
++              placeholder="Describe el contexto narrativo, la iluminación, fuentes de inspiración y metodología del lienzo..."
++              rows={4}
++              required
++              value={descripcion}
++              onChange={(e) => setDescripcion(e.target.value)}
++            />
++          </div>
++
++          {/* Declaración de cumplimiento y anonimato */}
++          <div className="p-space-sm bg-surface-container rounded-lg flex items-start gap-space-sm">
++            <input
++              className="mt-1 w-4 h-4 rounded text-primary-container bg-surface-container-highest focus:ring-primary cursor-pointer"
++              id="check-anon"
++              type="checkbox"
++              checked={aceptado}
++              onChange={(e) => setAceptado(e.target.checked)}
++            />
++            <label className="font-body-sm text-body-sm text-on-surface-variant cursor-pointer" htmlFor="check-anon">
++              Confirmo que el archivo cargado no contiene{' '}
++              <span className="text-on-surface font-semibold">firmas, isotipos ni marcas de agua identificativas</span>, y que
++              certifico la autoría humana original de la pintura. Esta declaración queda firmada digitalmente con mi llave ECDSA.
++            </label>
++          </div>
++
++          {/* Avisos */}
++          {bloqueo && !ocupado && (
++            <p className="flex items-start gap-2 font-body-sm text-body-sm text-tertiary bg-surface-container rounded-lg p-space-sm">
++              <Icon name="info" className="text-[18px]" />
++              {bloqueo}
++            </p>
++          )}
++          {error && (
++            <p className="flex items-start gap-2 font-body-sm text-body-sm text-error bg-surface-container rounded-lg p-space-sm">
++              <Icon name="error" className="text-[18px]" />
++              {error}
++            </p>
++          )}
++
++          {/* Avance del proceso criptográfico */}
++          {ocupado && (
++            <ol className="flex flex-col gap-2 bg-surface-container rounded-lg p-space-md">
++              {PASOS.map((p, i) => {
++                const actual = PASOS.findIndex((x) => x.id === procesando);
++                const estado = i < actual ? 'hecho' : i === actual ? 'actual' : 'pendiente';
++                return (
++                  <li
++                    key={p.id}
++                    className={`flex items-center gap-2 font-body-md text-body-md ${
++                      estado === 'pendiente' ? 'text-outline' : 'text-on-surface'
++                    }`}
++                  >
++                    <Icon
++                      name={estado === 'hecho' ? 'check_circle' : estado === 'actual' ? 'progress_activity' : 'radio_button_unchecked'}
++                      className={`text-[20px] ${estado === 'actual' ? 'animate-spin text-primary' : estado === 'hecho' ? 'text-primary-container' : ''}`}
++                    />
++                    {p.texto}
++                  </li>
++                );
++              })}
++            </ol>
++          )}
++
++          {/* Acciones */}
++          <div className="flex items-center justify-end gap-space-md pt-space-sm">
++            <button
++              type="button"
++              onClick={onCerrar}
++              disabled={ocupado}
++              className="px-5 py-2.5 rounded-lg bg-surface-container hover:bg-surface-bright text-on-surface font-label-md text-label-md uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
++            >
++              Cancelar
++            </button>
++            <button
++              type="submit"
++              disabled={!puedeEnviar}
++              className="px-7 py-2.5 rounded-lg bg-primary-container hover:bg-tertiary-container text-on-primary font-label-md text-label-md uppercase tracking-wider font-bold transition-all shadow-[0_0_20px_rgba(255,107,0,0.35)] flex items-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
++            >
++              <Icon name="publish" className="text-[18px]" />
++              Confirmar y Registrar Lienzo
++            </button>
++          </div>
++        </form>
++      </div>
++    </div>
++  );
++}
+diff --git a/frontend/src/data/painterSession.ts b/frontend/src/data/painterSession.ts
+new file mode 100644
+index 0000000..2ccf0e6
+--- /dev/null
++++ b/frontend/src/data/painterSession.ts
+@@ -0,0 +1,13 @@
++/**
++ * data/painterSession.ts
++ * Pintor "en sesión". Todavía no hay login ni endpoint que diga quién es el pintor actual,
++ * así que se toma de variables de entorno (ver frontend/.env.example).
++ *
++ * VITE_PAINTER_ID debe ser el UUID del pintor que ya existe en la tabla `pintores`.
++ */
++export const PINTOR_ACTUAL = {
++  id: import.meta.env.VITE_PAINTER_ID ?? '00000000-0000-0000-0000-000000000000',
++  nombre: import.meta.env.VITE_PAINTER_NAME ?? 'Kaelen Voss',
++  avatarUrl:
++    'https://lh3.googleusercontent.com/aida-public/AB6AXuDnLc-IbUukRYHnOjwQ7cwbyIrnSyeWcuepX9J8YkD7PK_YO5wWor585XD51ux__mgiKwkYUFDjmchwt2WJsOVSBTqlkJqrb2zWRDr_sBHOCo4d325Zi5YoZsbPNZEUPGjPMCueIjXNSBjTDUtvZ9Jv_gXti2MGt-sTq2rl4FqxvNZaC6FDWb1MWfSqzWBV1bkXVKjYg2XChdjPwuoKoXZbTQy0OY-mI5VdgLX3bY4-k3aE8famyEuK',
++} as const;
+diff --git a/frontend/src/hooks/useCryptoWorker.tsx b/frontend/src/hooks/useCryptoWorker.tsx
+index 04bd691..2f38610 100644
+--- a/frontend/src/hooks/useCryptoWorker.tsx
++++ b/frontend/src/hooks/useCryptoWorker.tsx
+@@ -4,8 +4,9 @@
+  * puedan interactuar con el worker
+  * 
+  */
+-import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
+-import { Status, Acciones } from '../workers/crypto.worker'; 
++import { createContext, useContext, useEffect, useRef, useState } from 'react';
++import type { ReactNode } from 'react';
++import { Status, Acciones } from '../workers/cryptoProtocol';
+ 
+ 
+ interface CryptoContextType {
+diff --git a/frontend/src/hooks/usePainterCrypto.ts b/frontend/src/hooks/usePainterCrypto.ts
+new file mode 100644
+index 0000000..7f63d42
+--- /dev/null
++++ b/frontend/src/hooks/usePainterCrypto.ts
+@@ -0,0 +1,155 @@
++/**
++ * hooks/usePainterCrypto.ts
++ * Operaciones criptográficas del pintor, escritas sobre el worker de Pyodide:
++ *   - llave de firma ECDSA P-256 (generar / importar)
++ *   - cifrar la obra con AES-256-GCM
++ *   - firmar el consentimiento con ECDSA y verificar la firma
++ *   - pruebas de integridad (alterar un dato y comprobar que se detecta)
++ *
++ * Los componentes llaman a estas funciones y no se enteran de que detrás hay Python.
++ */
++import { useCallback } from 'react';
++import { useCryptoWorker } from './useCryptoWorker';
++import { Acciones } from '../workers/cryptoProtocol';
++import { AAD_OBRA, construirConsentimiento } from '../lib/consentimiento';
++import type {
++  EntradaObra,
++  LlavesFirma,
++  ObraCifrada,
++  PasoProceso,
++  ResultadoPrueba,
++} from '../types/painterPanel';
++
++export function usePainterCrypto() {
++  const { estaListo, ejecutarAccion } = useCryptoWorker();
++
++  const generarLlaves = useCallback(async (): Promise<LlavesFirma> => {
++    const r = await ejecutarAccion(Acciones.GENERAR_ECDSA);
++    return { publica: r.publica, privada: r.privada, huella: r.huella, origen: 'generada' };
++  }, [ejecutarAccion]);
++
++  const importarLlave = useCallback(
++    async (pemPrivada: string): Promise<LlavesFirma> => {
++      const r = await ejecutarAccion(Acciones.IMPORTAR_ECDSA, { privada: pemPrivada });
++      return { publica: r.publica, privada: r.privada, huella: r.huella, origen: 'importada' };
++    },
++    [ejecutarAccion],
++  );
++
++  /** Cifra la obra, arma el consentimiento, lo firma y comprueba todo antes de devolver. */
++  const cifrarYFirmar = useCallback(
++    async (e: EntradaObra, onPaso?: (p: PasoProceso) => void): Promise<ObraCifrada> => {
++      // 1) AES-256-GCM
++      onPaso?.('cifrando');
++      const datos = new Uint8Array(await e.archivo.arrayBuffer());
++      const c = await ejecutarAccion(Acciones.CIFRAR_AES_GCM, { datos, aad: AAD_OBRA });
++      const cifrado = new Uint8Array(c.cifrado);
++
++      // 2) Consentimiento + ECDSA
++      onPaso?.('firmando');
++      const documento = construirConsentimiento({
++        pintorId: e.pintorId,
++        titulo: e.titulo,
++        nombreArchivo: e.archivo.name,
++        tipoMime: e.archivo.type,
++        tamanoBytes: e.archivo.size,
++        hashOriginal: c.hash_original,
++        hashCifrado: c.hash_cifrado,
++      });
++      const f = await ejecutarAccion(Acciones.FIRMAR_CONSENTIMIENTO, {
++        documento,
++        privada: e.llaves.privada,
++      });
++
++      // 3) Comprobaciones: la firma verifica y el descifrado devuelve la obra original
++      onPaso?.('verificando');
++      const v = await ejecutarAccion(Acciones.VERIFICAR_FIRMA, {
++        documento,
++        firma: f.firma,
++        publica: e.llaves.publica,
++      });
++      const d = await ejecutarAccion(Acciones.DESCIFRAR_AES_GCM, {
++        cifrado,
++        llave: c.llave,
++        aad: AAD_OBRA,
++        solo_hash: true,
++      });
++
++      return {
++        titulo: e.titulo,
++        descripcion: e.descripcion,
++        nombreArchivo: e.archivo.name,
++        tipoMime: e.archivo.type,
++        tamanoOriginal: e.archivo.size,
++        previewUrl: URL.createObjectURL(e.archivo),
++        llaveAes: c.llave,
++        nonce: c.nonce,
++        tag: c.tag,
++        cifrado,
++        hashOriginal: c.hash_original,
++        hashCifrado: c.hash_cifrado,
++        consentimiento: {
++          documento,
++          firma: f.firma,
++          hashDocumento: f.hash_documento,
++          algoritmo: f.algoritmo,
++          huellaFirmante: f.huella,
++          clavePublica: e.llaves.publica,
++        },
++        verificaciones: {
++          firmaValida: v.valida === true,
++          descifradoCoincide: d.hash === c.hash_original,
++        },
++        creadaEn: new Date().toISOString(),
++      };
++    },
++    [ejecutarAccion],
++  );
++
++  /** Cambia 1 byte del archivo cifrado y comprueba que GCM se niega a descifrarlo. */
++  const probarAlteracionCifrado = useCallback(
++    async (obra: ObraCifrada): Promise<ResultadoPrueba> => {
++      const alterado = new Uint8Array(obra.cifrado);
++      alterado[12] ^= 0x01; // primer byte del texto cifrado (justo después del nonce)
++      try {
++        await ejecutarAccion(Acciones.DESCIFRAR_AES_GCM, {
++          cifrado: alterado,
++          llave: obra.llaveAes,
++          aad: AAD_OBRA,
++          solo_hash: true,
++        });
++        return { detectada: false, mensaje: 'El archivo alterado se descifró: la integridad NO está protegida.' };
++      } catch (err) {
++        return {
++          detectada: true,
++          mensaje: err instanceof Error ? err.message : String(err),
++        };
++      }
++    },
++    [ejecutarAccion],
++  );
++
++  /** Agrega un espacio al consentimiento y comprueba que la firma deja de ser válida. */
++  const probarAlteracionConsentimiento = useCallback(
++    async (obra: ObraCifrada): Promise<ResultadoPrueba> => {
++      const r = await ejecutarAccion(Acciones.VERIFICAR_FIRMA, {
++        documento: obra.consentimiento.documento + ' ',
++        firma: obra.consentimiento.firma,
++        publica: obra.consentimiento.clavePublica,
++      });
++      return r.valida
++        ? { detectada: false, mensaje: 'La firma siguió siendo válida con el texto alterado.' }
++        : { detectada: true, mensaje: 'Firma ECDSA inválida: el documento ya no coincide con lo que se firmó.' };
++    },
++    [ejecutarAccion],
++  );
++
++  return {
++    estaListo,
++    generarLlaves,
++    importarLlave,
++    cifrarYFirmar,
++    probarAlteracionCifrado,
++    probarAlteracionConsentimiento,
++  };
++}
+diff --git a/frontend/src/lib/consentimiento.ts b/frontend/src/lib/consentimiento.ts
+new file mode 100644
+index 0000000..7df8465
+--- /dev/null
++++ b/frontend/src/lib/consentimiento.ts
+@@ -0,0 +1,51 @@
++/**
++ * lib/consentimiento.ts
++ * Construye el documento de consentimiento que firma el pintor.
++ *
++ * Se firma el TEXTO EXACTO que devuelve construirConsentimiento() (se guarda tal cual en
++ * pinturas.documento_consentimiento). Quien verifique debe usar ese mismo texto, sin volver a
++ * serializar el JSON, para no depender del orden de las llaves ni de los espacios.
++ *
++ * Al incluir el SHA-256 de la obra (original y cifrada), la firma queda atada a ESE archivo:
++ * si cambia un solo byte de la obra, el consentimiento deja de corresponderle.
++ */
++
++export const DECLARACION =
++  'Certifico la autoría humana original de esta obra, que el archivo no contiene firmas, ' +
++  'isotipos ni marcas de agua identificativas, y acepto las bases del concurso.';
++
++/**
++ * AAD de AES-GCM: texto que se autentica (no se cifra) junto con la obra.
++ * Es fijo a propósito: el juez necesita el mismo valor para descifrar y no debe incluir
++ * datos que revelen la identidad del pintor.
++ */
++export const AAD_OBRA = 'ARTCLASH-PRO|obra|v1';
++
++export interface DatosConsentimiento {
++  pintorId: string;
++  titulo: string;
++  nombreArchivo: string;
++  tipoMime: string;
++  tamanoBytes: number;
++  hashOriginal: string;
++  hashCifrado: string;
++}
++
++export function construirConsentimiento(d: DatosConsentimiento): string {
++  return JSON.stringify(
++    {
++      version: 1,
++      tipo: 'consentimiento-participacion',
++      pintor_id: d.pintorId,
++      titulo: d.titulo,
++      archivo: { nombre: d.nombreArchivo, tipo_mime: d.tipoMime, tamano_bytes: d.tamanoBytes },
++      sha256_obra_original: d.hashOriginal,
++      sha256_obra_cifrada: d.hashCifrado,
++      cifrado: 'AES-256-GCM',
++      declaracion: DECLARACION,
++      fecha: new Date().toISOString(),
++    },
++    null,
++    2,
++  );
++}
+diff --git a/frontend/src/lib/formato.ts b/frontend/src/lib/formato.ts
+new file mode 100644
+index 0000000..c02a421
+--- /dev/null
++++ b/frontend/src/lib/formato.ts
+@@ -0,0 +1,53 @@
++/**
++ * lib/formato.ts
++ * Utilidades pequeñas para mostrar datos binarios en la interfaz y descargarlos.
++ */
++
++export function formatearBytes(n: number): string {
++  if (n < 1024) return `${n} B`;
++  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
++  return `${(n / (1024 * 1024)).toFixed(2)} MB`;
++}
++
++/** Hex de los primeros `max` bytes, en filas de 16 bytes ("a1 b2 c3 ..."). */
++export function vistaHex(bytes: Uint8Array, max = 96): string {
++  const filas: string[] = [];
++  const tope = Math.min(bytes.length, max);
++  for (let i = 0; i < tope; i += 16) {
++    const fila = Array.from(bytes.slice(i, Math.min(i + 16, tope)))
++      .map((b) => b.toString(16).padStart(2, '0'))
++      .join(' ');
++    filas.push(fila);
++  }
++  return filas.join('\n') + (bytes.length > max ? '\n…' : '');
++}
++
++/** "9db689d7…f502ff" */
++export function acortar(texto: string, inicio = 10, fin = 8): string {
++  return texto.length <= inicio + fin + 1 ? texto : `${texto.slice(0, inicio)}…${texto.slice(-fin)}`;
++}
++
++/** Agrupa un hex en bloques de 4 para leerlo mejor: "9db6 89d7 61e7 ..." */
++export function agruparHex(hex: string, tam = 4): string {
++  return hex.match(new RegExp(`.{1,${tam}}`, 'g'))?.join(' ') ?? hex;
++}
++
++/** Dispara la descarga de un archivo generado en el navegador. */
++export function descargar(nombre: string, contenido: Uint8Array<ArrayBuffer> | string, mime: string) {
++  const blob = new Blob([contenido], { type: mime });
++  const url = URL.createObjectURL(blob);
++  const a = document.createElement('a');
++  a.href = url;
++  a.download = nombre;
++  a.click();
++  URL.revokeObjectURL(url);
++}
++
++export async function copiar(texto: string): Promise<boolean> {
++  try {
++    await navigator.clipboard.writeText(texto);
++    return true;
++  } catch {
++    return false;
++  }
++}
+diff --git a/frontend/src/pages/PanelPintorPage.tsx b/frontend/src/pages/PanelPintorPage.tsx
+index 6ac25aa..c829a95 100644
+--- a/frontend/src/pages/PanelPintorPage.tsx
++++ b/frontend/src/pages/PanelPintorPage.tsx
+@@ -1,17 +1,160 @@
+ /**
+  * pages/PanelPintorPage.tsx
+- * Página "Panel del Pintor" (ruta lista; su HTML original, panel-pintor.html, llegó vacío).
+- * Por ahora muestra una plantilla temporal. Reemplazar el contenido
+- * cuando se tenga el diseño de esta sección.
++ * Página "Panel del Pintor" (migrada de Interfaces/PanelPintor/code.html).
++ *
++ * Flujo:
++ *   1. El pintor genera o importa su llave de firma ECDSA P-256.
++ *   2. Sube su pintura en el modal. El archivo se cifra con AES-256-GCM y se firma el
++ *      consentimiento con ECDSA, todo dentro del navegador (Python en un Web Worker).
++ *   3. El panel muestra la evidencia criptográfica del resultado.
++ *
++ * Todavía NO se envía nada al backend: faltan los sobres RSA-OAEP para los jueces y el
++ * endpoint POST /api/pinturas/cargar. Ver notas al final del archivo.
+  */
+-import PendingPage from '../components/ui/PendingPage';
++import { useEffect, useRef, useState } from 'react';
++import Icon from '../components/ui/Icon';
++import PainterBanner from '../components/painter/PainterBanner';
++import SigningKeyCard from '../components/painter/SigningKeyCard';
++import ArtworkCard from '../components/painter/ArtworkCard';
++import UploadModal from '../components/painter/UploadModal';
++import type { DatosFormulario } from '../components/painter/UploadModal';
++import CryptoEvidence from '../components/painter/CryptoEvidence';
++import { usePainterCrypto } from '../hooks/usePainterCrypto';
++import { PINTOR_ACTUAL } from '../data/painterSession';
++import type { LlavesFirma, ObraCifrada, PasoProceso } from '../types/painterPanel';
++
++const mensajeError = (e: unknown) => (e instanceof Error ? e.message : String(e));
+ 
+ export default function PanelPintorPage() {
++  const { estaListo, generarLlaves, importarLlave, cifrarYFirmar } = usePainterCrypto();
++
++  /** STATE: llave de firma cargada (null mientras no se genere/importe). */
++  const [llaves, setLlaves] = useState<LlavesFirma | null>(null);
++  const [ocupadoLlaves, setOcupadoLlaves] = useState(false);
++  const [errorLlaves, setErrorLlaves] = useState<string | null>(null);
++
++  /** STATE: obra ya cifrada y firmada (slot 01 de 01). */
++  const [obra, setObra] = useState<ObraCifrada | null>(null);
++
++  /** STATE: modal de subida y avance del proceso criptográfico. */
++  const [modalAbierto, setModalAbierto] = useState(false);
++  const [procesando, setProcesando] = useState<PasoProceso | null>(null);
++  const [errorSubida, setErrorSubida] = useState<string | null>(null);
++
++  const evidenciaRef = useRef<HTMLDivElement>(null);
++  const previewActual = useRef<string | null>(null);
++
++  // Libera la URL local de la vista previa al reemplazar la obra o salir de la página
++  useEffect(() => {
++    const anterior = previewActual.current;
++    previewActual.current = obra?.previewUrl ?? null;
++    if (anterior && anterior !== previewActual.current) URL.revokeObjectURL(anterior);
++  }, [obra]);
++  useEffect(() => () => {
++    if (previewActual.current) URL.revokeObjectURL(previewActual.current);
++  }, []);
++
++  const conLlaves = async (accion: () => Promise<LlavesFirma>) => {
++    setOcupadoLlaves(true);
++    setErrorLlaves(null);
++    try {
++      setLlaves(await accion());
++    } catch (e) {
++      setErrorLlaves(mensajeError(e));
++    } finally {
++      setOcupadoLlaves(false);
++    }
++  };
++
++  const alImportar = (archivo: File) => conLlaves(async () => importarLlave(await archivo.text()));
++
++  const alEnviar = async (datos: DatosFormulario) => {
++    if (!llaves) return;
++    setErrorSubida(null);
++    setProcesando('cifrando');
++    try {
++      const nueva = await cifrarYFirmar({ ...datos, pintorId: PINTOR_ACTUAL.id, llaves }, setProcesando);
++      setObra(nueva);
++      setModalAbierto(false);
++      // Espera a que se pinte el panel de evidencia y baja hasta él
++      setTimeout(() => evidenciaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
++    } catch (e) {
++      setErrorSubida(mensajeError(e));
++    } finally {
++      setProcesando(null);
++    }
++  };
++
++  const abrirModal = () => {
++    setErrorSubida(null);
++    setModalAbierto(true);
++  };
++
++  const bloqueo = !estaListo
++    ? 'El motor criptográfico (Python) todavía se está cargando. Espera unos segundos.'
++    : !llaves
++      ? 'Primero genera o importa tu llave de firma ECDSA en el panel "Llave de firma".'
++      : null;
++
+   return (
+-    <PendingPage
+-      title="Panel del Pintor"
+-      icon="palette"
+-      description="Espacio del artista para subir y dar seguimiento a sus obras."
+-    />
++    <div className="flex flex-col w-full">
++      <PainterBanner nombre={PINTOR_ACTUAL.nombre} avatarUrl={PINTOR_ACTUAL.avatarUrl} onSubir={abrirModal} />
++
++      <div className="max-w-7xl mx-auto w-full px-gutter py-space-xl flex flex-col gap-space-lg">
++        <SigningKeyCard
++          llaves={llaves}
++          motorListo={estaListo}
++          ocupado={ocupadoLlaves}
++          error={errorLlaves}
++          onGenerar={() => conLlaves(generarLlaves)}
++          onImportar={alImportar}
++        />
++
++        {/* Mis obras en competencia */}
++        <div className="flex flex-col gap-space-lg">
++          <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-sm pb-2">
++            <div className="flex items-center gap-space-xs">
++              <Icon name="gallery_thumbnail" className="text-primary text-[24px]" />
++              <h2 className="font-headline-sm text-headline-sm text-on-surface font-bold">Mis Obras en Competencia</h2>
++            </div>
++            <div className="flex items-center gap-space-sm bg-surface-container-high px-4 py-2 rounded-lg text-secondary font-label-sm text-label-sm">
++              <Icon name="info" className="text-primary text-[18px]" />
++              <span>Requisitos clave: Mín. 4000x3000px (300 DPI) • Sin marcas de agua</span>
++            </div>
++          </div>
++
++          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-space-lg">
++            <ArtworkCard
++              obra={obra}
++              onSubir={abrirModal}
++              onVerDetalles={() => evidenciaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
++            />
++          </div>
++        </div>
++
++        <div ref={evidenciaRef} className="scroll-mt-28">
++          {obra && <CryptoEvidence obra={obra} />}
++        </div>
++      </div>
++
++      <UploadModal
++        abierto={modalAbierto}
++        procesando={procesando}
++        error={errorSubida}
++        bloqueo={bloqueo}
++        onCerrar={() => setModalAbierto(false)}
++        onEnviar={alEnviar}
++      />
++    </div>
+   );
+ }
++
++/*
++ * PENDIENTE PARA CONECTAR CON EL BACKEND (POST /api/pinturas/cargar)
++ *  - Sobres: cifrar `obra.llaveAes` con la llave RSA-OAEP de cada juez
++ *    (GET /api/jurado/llaves-publicas) y descartar la llave en claro.
++ *  - Enviar multipart: archivo `obra.cifrado`, `obra.consentimiento.documento`,
++ *    `obra.consentimiento.firma` y el arreglo de sobres. apiClient.ts hoy fuerza
++ *    Content-Type: application/json y habría que omitirlo para FormData.
++ *  - `titulo` y `descripcion` no tienen columna en el modelo Pintura todavía.
++ */
+diff --git a/frontend/src/pages/RegistroPintorPage.tsx b/frontend/src/pages/RegistroPintorPage.tsx
+index 5093698..e396b52 100644
+--- a/frontend/src/pages/RegistroPintorPage.tsx
++++ b/frontend/src/pages/RegistroPintorPage.tsx
+@@ -5,9 +5,8 @@
+  * cuando se tenga el diseño de esta sección.
+  */
+ import PendingPage from '../components/ui/PendingPage';
+-import { useRegisterPainter } from '../hooks/useRegisterPainter';
+ import { useCryptoWorker } from '../hooks/useCryptoWorker';
+-import { Acciones } from '../workers/crypto.worker';
++import { Acciones } from '../workers/cryptoProtocol';
+ import { useState } from 'react';
+ 
+ export default function RegistroPintorPage() {
+diff --git a/frontend/src/types/painterPanel.ts b/frontend/src/types/painterPanel.ts
+new file mode 100644
+index 0000000..585689b
+--- /dev/null
++++ b/frontend/src/types/painterPanel.ts
+@@ -0,0 +1,68 @@
++/**
++ * types/painterPanel.ts
++ * Tipos del Panel del Pintor (llave de firma, obra cifrada y consentimiento firmado).
++ */
++
++/** Par de llaves ECDSA P-256 del pintor (PEM). La privada nunca sale del navegador. */
++export interface LlavesFirma {
++  publica: string;
++  privada: string;
++  /** SHA-256 (hex) de la llave pública en DER: sirve para compararla con la de la BD. */
++  huella: string;
++  origen: 'generada' | 'importada';
++}
++
++/** Consentimiento firmado: lo que se guardaría en pinturas.documento_consentimiento / firma_consentimiento. */
++export interface ConsentimientoFirmado {
++  /** Texto exacto (JSON) que se firmó. Se verifica byte a byte, no se re-serializa. */
++  documento: string;
++  /** Firma ECDSA r||s en Base64. */
++  firma: string;
++  hashDocumento: string;
++  algoritmo: string;
++  /** Huella de la llave pública con que se firmó. */
++  huellaFirmante: string;
++  /** Llave pública (PEM) con que se verificó. */
++  clavePublica: string;
++}
++
++/** Resultado de cifrar con AES-256-GCM + firmar el consentimiento. */
++export interface ObraCifrada {
++  titulo: string;
++  descripcion: string;
++  nombreArchivo: string;
++  tipoMime: string;
++  tamanoOriginal: number;
++  /** URL local (blob:) para mostrar la imagen original en el panel. */
++  previewUrl: string;
++  llaveAes: string; // Base64, 32 bytes
++  nonce: string; // Base64, 12 bytes
++  tag: string; // Base64, 16 bytes
++  /** Archivo a subir: nonce || texto cifrado || tag. */
++  cifrado: Uint8Array<ArrayBuffer>;
++  hashOriginal: string;
++  hashCifrado: string;
++  consentimiento: ConsentimientoFirmado;
++  /** Resultados de las verificaciones automáticas hechas al terminar. */
++  verificaciones: {
++    firmaValida: boolean;
++    descifradoCoincide: boolean;
++  };
++  creadaEn: string;
++}
++
++export type PasoProceso = 'cifrando' | 'firmando' | 'verificando';
++
++export interface EntradaObra {
++  archivo: File;
++  titulo: string;
++  descripcion: string;
++  pintorId: string;
++  llaves: LlavesFirma;
++}
++
++/** Resultado de una prueba de integridad (alterar un dato y comprobar que se detecta). */
++export interface ResultadoPrueba {
++  detectada: boolean;
++  mensaje: string;
++}
+diff --git a/frontend/src/workers/crypto.worker.ts b/frontend/src/workers/crypto.worker.ts
+index 788a39c..5a1af30 100644
+--- a/frontend/src/workers/crypto.worker.ts
++++ b/frontend/src/workers/crypto.worker.ts
+@@ -3,80 +3,73 @@
+  * Este archivo va a ser un hilo de procesamiento independiente
+  * (Web Worker) que ejecuta un entorno de Linux virtual con python y C compilado
+  * a WebAssembly (WASM), todo dentro de la memoria RAM del navegador del usuario.
++ *
++ * Las constantes compartidas con React (Acciones, Status...) están en cryptoProtocol.ts
+  */
+ 
+ // Importamos directamente el modulo ES6 desde el CDN estable
+ // @ts-ignore
+ import { loadPyodide } from "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.mjs";
+-
+-export const Acciones = {
+-  PROBARCONEXION: "PROBAR_CONEXION",
+-  GENERAR_RSA: "GENERAR_RSA",
+-  GENERAR_AES: "GENERAR_AES"
+-} as const;
+-
+-export const Status = {
+-  EXITO: "EXITO",
+-  ERROR: "ERROR",
+-} as const;
++import { FUNCIONES_PYTHON, MODULOS_PYTHON, Status } from './cryptoProtocol';
+ 
+ let pyodide: any = null;
+ 
+ // Inicialización de Python
+ async function init() {
+   // loadPyodide descarga pyodide.asm.wasm
+-  pyodide = await loadPyodide({ 
+-    indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/" 
++  pyodide = await loadPyodide({
++    indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/"
+   });
+   //cargamos la libreria
+   await pyodide.loadPackage('pycryptodome');
+-  
+-  // Para utilizar modulos de Python, hacemos peticiones HTTP a nuestro servidor
+-  // Obtenemos el codigo fuente como texto
+-  const rsaCode = await (await fetch('/python/rsa_utils.py')).text();
+-  const aesCode = await (await fetch('/python/aes_utils.py')).text();
+-  
+-  //pyodide.FS.writeFile() escrive el texto/codigo fuente para escribir ese
+-  //texto en el Sistema de archivos virtual en Memoria (VFS) de Pyodide
+-  pyodide.FS.writeFile('rsa_utils.py', rsaCode);
+-  pyodide.FS.writeFile('aes_utils.py', aesCode);
++
++  // Para utilizar modulos de Python, hacemos peticiones HTTP a nuestro servidor,
++  // obtenemos el codigo fuente como texto y lo escribimos en el Sistema de archivos
++  // virtual en Memoria (VFS) de Pyodide para que main.py pueda hacer "import".
++  for (const modulo of MODULOS_PYTHON) {
++    const codigo = await (await fetch(`/python/${modulo}.py`)).text();
++    pyodide.FS.writeFile(`${modulo}.py`, codigo);
++  }
+ 
+   // Ejecutamos el main
+   const mainCode = await (await fetch('/python/main.py')).text();
+   pyodide.runPython(mainCode);
+ }
+ 
+-// Promesa global de arranque 
++// Promesa global de arranque
+ const ready = init();
+ 
+ //Codigo para recibir datos de React
+ self.onmessage = async (e: MessageEvent) => {
++  // id para saber a que promesa de React responderle
++  const { id, accion, payload } = e.data;
+   try {
+     await ready;
+-    // id para saber a que promesa de React responderle
+-    const { id, accion, payload } = e.data;
+ 
+-    let fnName = "";
+-    if (accion === Acciones.PROBARCONEXION) fnName = 'probar_conexion';
+-    else if (accion === Acciones.GENERAR_RSA) fnName = 'generar_rsa';
+-    else if (accion === Acciones.GENERAR_AES) fnName = 'generar_aes';
++    const fnName = (FUNCIONES_PYTHON as Record<string, string>)[accion];
++    if (!fnName) throw new Error(`Acción desconocida: ${accion}`);
+ 
+-    if (fnName) {
+-      //obtenemos la funcion de pyodide
+-      const fnPython = pyodide.globals.get(fnName);
++    //obtenemos la funcion de pyodide
++    const fnPython = pyodide.globals.get(fnName);
++    // El payload llega como objeto JS; lo convertimos a dict de Python
++    // (los Uint8Array quedan como memoryview, que aes_utils._a_bytes sabe leer)
++    const payloadPython = pyodide.toPy(payload ?? {});
++    let resultPython: any;
++    try {
+       //ejecutamos la funcion
+-      const resultPython = fnPython(payload || {});
++      resultPython = fnPython(payloadPython);
+       //el resultado de la funcion lo convertimos en un formato que typescript entienda
++      //(los bytes de Python llegan como Uint8Array)
+       const resultJS = resultPython.toJs({ dict_converter: Object.fromEntries });
+ 
+-     
+       self.postMessage({ id, status: Status.EXITO, data: resultJS });
+-      
++    } finally {
+       //Borramos para liberar memoria
+-      resultPython.destroy();
++      resultPython?.destroy?.();
++      payloadPython.destroy();
+       fnPython.destroy();
+     }
+   } catch (error: any) {
+-    self.postMessage({ id: e.data.id, status: Status.ERROR, error: error.message });
++    self.postMessage({ id, status: Status.ERROR, error: error?.message ?? String(error) });
+   }
+-};
+\ No newline at end of file
++};
+diff --git a/frontend/src/workers/cryptoProtocol.ts b/frontend/src/workers/cryptoProtocol.ts
+new file mode 100644
+index 0000000..b57f15a
+--- /dev/null
++++ b/frontend/src/workers/cryptoProtocol.ts
+@@ -0,0 +1,43 @@
++/**
++ * workers/cryptoProtocol.ts
++ * "Contrato" entre React y el worker criptográfico: nombres de acciones y estados.
++ *
++ * Vive en su propio archivo (y no dentro de crypto.worker.ts) porque cualquier archivo que
++ * IMPORTE crypto.worker.ts ejecuta su código, incluido el arranque de Pyodide, en el hilo
++ * principal de la página. Así solo el worker carga Pyodide.
++ */
++
++export const Acciones = {
++  PROBARCONEXION: 'PROBAR_CONEXION',
++  GENERAR_RSA: 'GENERAR_RSA',
++  GENERAR_AES: 'GENERAR_AES',
++  GENERAR_ECDSA: 'GENERAR_ECDSA',
++  IMPORTAR_ECDSA: 'IMPORTAR_ECDSA',
++  CIFRAR_AES_GCM: 'CIFRAR_AES_GCM',
++  DESCIFRAR_AES_GCM: 'DESCIFRAR_AES_GCM',
++  FIRMAR_CONSENTIMIENTO: 'FIRMAR_CONSENTIMIENTO',
++  VERIFICAR_FIRMA: 'VERIFICAR_FIRMA',
++} as const;
++
++export type Accion = (typeof Acciones)[keyof typeof Acciones];
++
++export const Status = {
++  EXITO: 'EXITO',
++  ERROR: 'ERROR',
++} as const;
++
++/** Acción de React → función de Python que la atiende (definidas en public/python/main.py). */
++export const FUNCIONES_PYTHON: Record<Accion, string> = {
++  [Acciones.PROBARCONEXION]: 'probar_conexion',
++  [Acciones.GENERAR_RSA]: 'generar_rsa',
++  [Acciones.GENERAR_AES]: 'generar_aes',
++  [Acciones.GENERAR_ECDSA]: 'generar_ecdsa',
++  [Acciones.IMPORTAR_ECDSA]: 'importar_ecdsa',
++  [Acciones.CIFRAR_AES_GCM]: 'cifrar_aes_gcm',
++  [Acciones.DESCIFRAR_AES_GCM]: 'descifrar_aes_gcm',
++  [Acciones.FIRMAR_CONSENTIMIENTO]: 'firmar_consentimiento',
++  [Acciones.VERIFICAR_FIRMA]: 'verificar_firma',
++};
++
++/** Módulos de public/python/ que se copian al sistema de archivos virtual de Pyodide. */
++export const MODULOS_PYTHON = ['rsa_utils', 'aes_utils', 'ecdsa_utils'] as const;

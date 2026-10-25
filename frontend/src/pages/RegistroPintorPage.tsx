@@ -5,9 +5,8 @@
  * cuando se tenga el diseño de esta sección.
  */
 import PendingPage from '../components/ui/PendingPage';
-import { useRegisterPainter } from '../hooks/useRegisterPainter';
 import { useCryptoWorker } from '../hooks/useCryptoWorker';
-import { Acciones } from '../workers/crypto.worker';
+import { Acciones } from '../workers/cryptoProtocol';
 import { useState } from 'react';
 
 export default function RegistroPintorPage() {

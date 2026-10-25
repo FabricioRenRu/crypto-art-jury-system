@@ -78,3 +78,6 @@ Thumbs.db
 *.jpg
 *.png
 *.bmp
+
+# Script local de verificación
+backend/verificar_cifrado.py

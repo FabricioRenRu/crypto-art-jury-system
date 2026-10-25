@@ -9,18 +9,23 @@ export const ENDPOINTS = {
     REGISTRO_PINTOR: '/api/auth/pintores/registro',
     LOGIN_PINTOR: '/api/auth/pintores/login',
     LOGIN_JURADO: '/api/auth/jurados/login',
+    LLAVE_PINTOR: '/api/auth/pintores/llave',
+    ESTADO_LLAVE_PINTOR: '/api/auth/pintores/llave/estado',
   },
   
   // Rutas de Pintores
   PINTORES: {
     BASE: '/api/pintores',
+    ME: '/api/pintores/me',
     // Ejemplo con Path Parameter
     DETALLE: (idPintor: string) => `/api/pintores/${idPintor}`, 
   },
 
   // Rutas de Pinturas
   PINTURAS: {
-    SUBIR: '/api/pinturas/subir',
+    CARGAR: '/api/pinturas/cargar',
+    MIS_OBRAS: '/api/pinturas/mis-obras',
+    IMAGEN: (idPintura: string) => `/api/pinturas/${idPintura}/imagen`,
     DETALLE: (idPintura: string) => `/api/pinturas/${idPintura}`,
     
     // Ejemplo combinando Path y Query Parameters (ej. /pinturas/pintor/123?estado=evaluada)

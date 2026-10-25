@@ -19,10 +19,6 @@ class PintorCreate(BaseModel):
         max_length=50
     )
 
-    clave_publica_ecdsa: str = Field(
-        description="Llave publica del pintor en formato PEM"
-    )
-
     foto_perfil_b64: Optional[str] = None
 
     @field_validator("contrasena")
@@ -41,37 +37,6 @@ class PintorCreate(BaseModel):
         return value
 
 
-    @field_validator("clave_publica_ecdsa")
-    @classmethod
-    def validate_pem_format(cls, value: str) -> str:
-        # 1. Limpiamos espacios o saltos de línea accidentales al inicio/final
-        value_limpio: str = value.strip()
-        
-        # 2. Validamos la cabecera estandar de una llave pública PEM
-        if not value_limpio.startswith("-----BEGIN PUBLIC KEY-----"):
-            raise ValueError(
-                "La llave pública tiene un formato inválido. Debe comenzar con '-----BEGIN PUBLIC KEY-----'."
-            )
-            
-        # 3. Validamos el pie estándar
-        if not value_limpio.endswith("-----END PUBLIC KEY-----"):
-            raise ValueError(
-                "La llave pública tiene un formato inválido. Debe terminar con '-----END PUBLIC KEY-----'."
-            )
-            
-        # 4. Validamos que haya contenido (Base64) entre la cabecera y el pie
-        # Dividimos por saltos de línea. Una llave real tendrá al menos 3 lineas
-        lineas: list[str] = value_limpio.splitlines()
-        if len(lineas) < 3:
-            raise ValueError(
-                "La llave pública está vacía o corrupta. Faltan los datos en Base64."
-            )
-            
-        return value_limpio
-
-   
-
-
 class PintorResponse(BaseModel):
     id: uuid.UUID
     email: str
@@ -79,6 +44,44 @@ class PintorResponse(BaseModel):
 
     class Config:
         from_attributes = True
-    
 
 
+class PintorRegistroResponse(PintorResponse):
+    """
+    Respuesta del registro. Incluye la llave privada UNA sola vez para que el usuario la
+    descargue; el servidor no la guarda.
+    """
+    clave_privada_pem: str
+
+
+class CargarLlaveRequest(BaseModel):
+    pem: str = Field(min_length=50, max_length=4000)
+
+
+class EstadoLlaveResponse(BaseModel):
+    lista: bool
+
+
+class PerfilPintorResponse(BaseModel):
+    """Datos del encabezado del Panel del Pintor."""
+    nombre: str
+    seudonimo: str
+    torneo: str
+    foto_perfil: Optional[str] = None
+
+
+class PinturaResponse(BaseModel):
+    """Una obra del pintor (tarjeta del Panel del Pintor)."""
+    id: uuid.UUID
+    slot: int
+    total_slots: int
+    titulo: str
+    descripcion: str
+    estado: str
+    hash_pintura_cifrada: str
+    firma_consentimiento: str
+
+
+class MisObrasResponse(BaseModel):
+    total_slots: int
+    obras: list[PinturaResponse]

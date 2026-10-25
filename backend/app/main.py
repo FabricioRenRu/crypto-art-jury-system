@@ -3,7 +3,9 @@ from fastapi.exceptions import RequestValidationError
 import logging
 import app.exceptions.exception_handlers as exception_handlers
 from app.exceptions.custom_exceptions import *
-from app.routes import auth, pinturas, jurado, evaluaciones, presidente, resultados
+from app.routes import auth, pintores, pinturas, jurado, evaluaciones, presidente, resultados
+from fastapi.staticfiles import StaticFiles
+import os
 from fastapi.middleware.cors import CORSMiddleware
 
 # Configuracion del logger
@@ -35,8 +37,13 @@ app.add_middleware(
 )
 
 
+# === Archivos estaticos (fotos de perfil). Las pinturas cifradas NO se sirven aqui. === #
+os.makedirs("static/avatars", exist_ok=True)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 # === Registrar Rutas === #
 app.include_router(auth.router)
+app.include_router(pintores.router)
 app.include_router(pinturas.router)
 app.include_router(jurado.router)
 app.include_router(evaluaciones.router)
@@ -57,6 +64,11 @@ app.add_exception_handler(
 app.add_exception_handler(
     EmailYaRegistradoException,
     exception_handlers.email_registrado_exception_handler
+)
+
+app.add_exception_handler(
+    AppException,
+    exception_handlers.app_exception_handler
 )
 
 app.add_exception_handler(

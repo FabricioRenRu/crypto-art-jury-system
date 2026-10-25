@@ -3,28 +3,34 @@
  * Página "Panel del Pintor" (migrada de Interfaces/PanelPintor).
  *
  * Muestra el perfil del pintor, sus obras en competencia y un modal
- * para subir una nueva pintura. Los datos salen de data/painterPanel.ts
- * hasta que se conecte con el backend.
+ * para subir una nueva pintura. Los datos vienen del backend (hook usePainterPanel):
+ * el cifrado AES-256-GCM, la firma ECDSA del consentimiento y los sobres de llave
+ * los hace el servidor al recibir la obra.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Icon from '../components/ui/Icon';
 import ArtworkCard from '../components/painter/ArtworkCard';
 import UploadArtworkModal from '../components/painter/UploadArtworkModal';
-import type { UploadArtworkData } from '../components/painter/UploadArtworkModal';
-import { PAINTER_ARTWORKS, PAINTER_PROFILE } from '../data/painterPanel';
+import { usePainterPanel } from '../hooks/usePainterPanel';
+import { PATHS } from '../routes/paths';
 
 export default function PanelPintorPage() {
   /** STATE: controla si el modal de subida esta abierto. */
   const [isUploadOpen, setIsUploadOpen] = useState(false);
 
-  const totalSlots = PAINTER_ARTWORKS[0]?.totalSlots ?? 1;
-  const nextSlot = Math.min(PAINTER_ARTWORKS.length + 1, totalSlots);
-  const slotLabel = `Slot ${String(nextSlot).padStart(2, '0')} de ${String(totalSlots).padStart(2, '0')}`;
+  const navigate = useNavigate();
+  const { profile, artworks, totalSlots, error, uploadArtwork } = usePainterPanel();
 
-  /** Aqui se enviaria la obra al backend (archivo, titulo y descripcion). */
-  const handleUpload = (data: UploadArtworkData) => {
-    console.log('Obra lista para enviar al backend:', data.title, data.file.name);
-  };
+  /** Sin JWT no hay panel: se manda al inicio de sesión. */
+  useEffect(() => {
+    if (!sessionStorage.getItem('access_token')) {
+      navigate(PATHS.sesion);
+    }
+  }, [navigate]);
+
+  const nextSlot = Math.min(artworks.length + 1, totalSlots);
+  const slotLabel = `Slot ${String(nextSlot).padStart(2, '0')} de ${String(totalSlots).padStart(2, '0')}`;
 
   return (
     <div className="flex flex-col w-full">
@@ -35,7 +41,7 @@ export default function PanelPintorPage() {
             <div className="relative">
               <div
                 className="w-16 h-16 rounded-xl bg-cover bg-center ring-2 ring-primary-container/60 shadow-lg"
-                style={{ backgroundImage: `url("${PAINTER_PROFILE.avatarUrl}")` }}
+                style={{ backgroundImage: `url("${profile.avatarUrl}")` }}
               />
               <span className="absolute -bottom-1 -right-1 bg-surface-container-highest text-primary px-1 py-0.5 rounded shadow flex items-center gap-0.5">
                 <Icon name="verified" className="text-[14px]" />
@@ -44,14 +50,14 @@ export default function PanelPintorPage() {
             <div className="flex flex-col">
               <div className="flex items-center gap-space-xs flex-wrap">
                 <h1 className="font-headline-md text-headline-md text-on-surface font-bold tracking-tight">
-                  {PAINTER_PROFILE.name}
+                  {profile.name}
                 </h1>
                 <span className="bg-primary-container/15 text-primary font-label-sm text-label-sm px-2 py-0.5 rounded uppercase tracking-wider font-semibold">
                   Artista Verificado
                 </span>
               </div>
               <p className="font-body-sm text-body-sm text-secondary mt-0.5">
-                {PAINTER_PROFILE.tournament}
+                {profile.tournament}
               </p>
             </div>
           </div>
@@ -85,8 +91,15 @@ export default function PanelPintorPage() {
             </div>
           </div>
 
+          {error && (
+            <div className="flex items-center gap-space-sm p-space-sm rounded-lg bg-error-container text-on-error-container font-body-md text-body-md">
+              <Icon name="error" className="text-[20px]" />
+              <span>{error}</span>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-space-lg">
-            {PAINTER_ARTWORKS.map((obra) => (
+            {artworks.map((obra) => (
               <ArtworkCard key={obra.id} artwork={obra} />
             ))}
           </div>
@@ -97,7 +110,7 @@ export default function PanelPintorPage() {
         isOpen={isUploadOpen}
         slotLabel={slotLabel}
         onClose={() => setIsUploadOpen(false)}
-        onSubmit={handleUpload}
+        onSubmit={uploadArtwork}
       />
     </div>
   );

@@ -4,8 +4,9 @@
  * puedan interactuar con el worker
  * 
  */
-import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
-import { Status, Acciones } from '../workers/crypto.worker'; 
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
+import { Status, Acciones } from '../workers/cryptoProtocol';
 
 
 interface CryptoContextType {

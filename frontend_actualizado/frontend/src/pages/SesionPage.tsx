@@ -12,6 +12,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import Icon from '../components/ui/Icon';
 import { PATHS } from '../routes/paths';
 import { useLogin, type RolLogin } from '../hooks/useLogin';
+import { authService } from '../services/authService';
 import { useCryptoWorker } from '../hooks/useCryptoWorker';
 import { Acciones } from '../workers/crypto.worker'
 
@@ -57,8 +58,13 @@ export default function SesionPage() {
       const llaveTexto = evento.target?.result as string;
       
       try {
-        // Mandamos la llave a la RAM del worker
-        await ejecutarAccion(Acciones.INYECCION_LLAVE_PRIVADA, { pem: llaveTexto, rol: rol });
+        if (rol === 'pintor') {
+          // El backend valida que el .pem corresponda a tu llave pública y lo deja solo en RAM
+          await authService.cargarLlavePintor(llaveTexto);
+        } else {
+          // El jurado sigue usando la RAM del worker
+          await ejecutarAccion(Acciones.INYECCION_LLAVE_PRIVADA, { pem: llaveTexto, rol: rol });
+        }
         
         // Redirigimos al panel
         if (rol === 'pintor') {
@@ -69,7 +75,7 @@ export default function SesionPage() {
         
       } catch (err: any) {
         console.error("Error inyectando la llave", err.message || err);
-        alert("El archivo PEM no es valido o esta corrupto.");
+        alert(err.message || "El archivo PEM no es valido o esta corrupto.");
       } finally {
         setIsInjecting(false);
       }
@@ -258,7 +264,7 @@ return (
                 </h2>
                 <p className="font-body-md text-body-md text-secondary">
                   Para firmar tus acciones, sube tu llave privada <strong>.pem</strong>. <br/>
-                  <span className="text-primary-container text-xs">Esta llave NUNCA saldrá de tu navegador.</span>
+                  <span className="text-primary-container text-xs">{rol === 'pintor' ? 'El servidor solo la mantiene en memoria durante tu sesión; nunca la guarda.' : 'Esta llave NUNCA saldrá de tu navegador.'}</span>
                 </p>
               </div>
 
