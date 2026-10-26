@@ -6,6 +6,8 @@ import { useState } from 'react';
 import { authService } from '../services/authService';
 import type { PintorCreate, PintorResponse } from '../types/pintor';
 import { descargarArchivoTexto } from '../utils/fileUtils';
+import { useCryptoWorker } from './useCryptoWorker';
+import { Acciones } from '../workers/crypto.worker';
 
 
 //Lo que la UI nos manda
@@ -18,6 +20,7 @@ interface FormularioRegistro {
 }
 
 export const useRegisterPainter = () => {
+  const { ejecutarAccion } = useCryptoWorker();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PintorResponse | null>(null);
@@ -27,23 +30,28 @@ export const useRegisterPainter = () => {
     setError(null);
     setResult(null);
 
+    let parLlaves: { private_key: string; public_key: string } | null = null;
     try {
-      // 1. Armamos el paquete para FastAPI. El par ECDSA lo genera el servidor.
+      // El worker del navegador genera el par; la privada no se agrega al payload HTTP.
+      const llavesGeneradas = await ejecutarAccion(Acciones.GENERAR_ECDSA);
+      parLlaves = llavesGeneradas;
       const payload: PintorCreate = {
         nombre: formData.nombre,
         seudonimo: formData.seudonimo,
         email: formData.email,
         contrasena: formData.contrasena,
-        foto_perfil_b64: formData.fotoBase64.startsWith("data:image") ? formData.fotoBase64 : null
+        clave_publica_ecdsa: llavesGeneradas.public_key,
+        foto_perfil_b64: formData.fotoBase64.startsWith('data:image')
+          ? formData.fotoBase64
+          : null,
       };
 
-      // 2. API: Mandamos a guardar a PostgreSQL
+      // apiRequest solo resuelve para respuestas HTTP exitosas (2xx).
       const backendResponse = await authService.registroPintor(payload);
 
-      // 3. ÉXITO: el servidor solo guardó la pública; la privada viene UNA vez en la
-      //    respuesta. La descargamos y no la dejamos en el estado de React.
+      // La llave privada se descarga localmente solo después del registro exitoso.
       const nombreArchivo = `llave_privada_${formData.nombre.replace(/\s+/g, '_').toLowerCase()}.pem`;
-      descargarArchivoTexto(backendResponse.clave_privada_pem, nombreArchivo);
+      descargarArchivoTexto(llavesGeneradas.private_key, nombreArchivo);
 
       setResult({
         id: backendResponse.id,
@@ -56,6 +64,8 @@ export const useRegisterPainter = () => {
       const errorMsg = err.message || "Error desconocido en el registro";
       setError(errorMsg);
     } finally {
+      if (parLlaves) parLlaves.private_key = '';
+      parLlaves = null;
       setIsLoading(false);
     }
   };

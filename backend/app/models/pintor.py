@@ -51,14 +51,6 @@ class Pintor(Base):
         nullable=False
     )
 
-    # Llave privada ECDSA cifrada (AES-256-GCM) con una llave derivada de la contrasena
-    # (scrypt). Es un JSON; nunca se guarda la privada en claro. Nula en cuentas creadas
-    # antes de mover la criptografia al backend.
-    clave_privada_cifrada: Mapped[Optional[str]] = mapped_column(
-        Text,
-        nullable=True
-    )
-
     foto_perfil: Mapped[str] = mapped_column(
         String(255),
         nullable=True
@@ -71,5 +63,4 @@ class Pintor(Base):
 
     # relacion 1:1 con pintura
     pintura: Mapped[Optional["Pintura"]] = relationship(back_populates="pintor")
-
 

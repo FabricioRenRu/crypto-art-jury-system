@@ -1214,3 +1214,4 @@ TypeError: 'foto_perfil_b64' is an invalid keyword argument for Pintor
 2026-10-25 13:34:28,563 - app.exceptions.exception_handlers - WARNING - Intento de autenticacion con credenciales incorrectas
 2026-10-25 13:36:32,465 - app.services.pinturas_service - ERROR - Se esperaban 3 jueces y hay 0
 2026-10-25 13:36:32,473 - app.exceptions.exception_handlers - WARNING - JURADO_INCOMPLETO en /api/pinturas/cargar: El jurado aun no esta configurado; intenta mas tarde.
+2026-10-25 17:32:04,918 - app.exceptions.exception_handlers - WARNING - Intento de autenticacion con credenciales incorrectas

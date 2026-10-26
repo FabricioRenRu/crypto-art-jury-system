@@ -1,10 +1,13 @@
-from pydantic import BaseModel, Field, EmailStr, field_validator
+from pydantic import BaseModel, ConfigDict, Field, EmailStr, field_validator
 import re
 import uuid
 from typing import Optional
+from Crypto.PublicKey import ECC
 
 
 class PintorCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     nombre: str = Field(
         min_length=4,
         max_length=30
@@ -19,7 +22,20 @@ class PintorCreate(BaseModel):
         max_length=50
     )
 
+    clave_publica_ecdsa: str = Field(min_length=50, max_length=4000)
     foto_perfil_b64: Optional[str] = None
+
+    @field_validator("clave_publica_ecdsa")
+    @classmethod
+    def validate_public_key(cls, value: str) -> str:
+        try:
+            key = ECC.import_key(value)
+        except (ValueError, IndexError, TypeError) as exc:
+            raise ValueError("La clave debe ser una llave pública ECDSA P-256 válida.") from exc
+
+        if key.has_private() or key.curve not in ("NIST P-256", "P-256", "secp256r1"):
+            raise ValueError("Se requiere únicamente la llave pública ECDSA de curva P-256.")
+        return key.public_key().export_key(format="PEM")
 
     @field_validator("contrasena")
     @classmethod
@@ -46,22 +62,6 @@ class PintorResponse(BaseModel):
         from_attributes = True
 
 
-class PintorRegistroResponse(PintorResponse):
-    """
-    Respuesta del registro. Incluye la llave privada UNA sola vez para que el usuario la
-    descargue; el servidor no la guarda.
-    """
-    clave_privada_pem: str
-
-
-class CargarLlaveRequest(BaseModel):
-    pem: str = Field(min_length=50, max_length=4000)
-
-
-class EstadoLlaveResponse(BaseModel):
-    lista: bool
-
-
 class PerfilPintorResponse(BaseModel):
     """Datos del encabezado del Panel del Pintor."""
     nombre: str
@@ -78,6 +78,7 @@ class PinturaResponse(BaseModel):
     titulo: str
     descripcion: str
     estado: str
+    tipo_mime: str
     hash_pintura_cifrada: str
     firma_consentimiento: str
 

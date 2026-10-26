@@ -13,6 +13,10 @@ export const Acciones = {
   PROBARCONEXION: "PROBAR_CONEXION",
   GENERAR_RSA: "GENERAR_RSA",
   GENERAR_AES: "GENERAR_AES",
+  CIFRAR_PINTURA: "CIFRAR_PINTURA",
+  DESCIFRAR_PINTURA: "DESCIFRAR_PINTURA",
+  VERIFICAR_LLAVE_AES: "VERIFICAR_LLAVE_AES",
+  FIRMAR_CONSENTIMIENTO: "FIRMAR_CONSENTIMIENTO",
   GENERAR_ECDSA: "GENERAR_ECDSA",
   INYECCION_LLAVE_PRIVADA: "INYECCION_LLAVE_PRIVADA",
   FIRMAR_MENSAJE_ECDSA: "FIRMAR_MENSAJE_ECDSA",
@@ -68,6 +72,10 @@ self.onmessage = async (e: MessageEvent) => {
     if (accion === Acciones.PROBARCONEXION) fnName = 'probar_conexion';
     else if (accion === Acciones.GENERAR_RSA) fnName = 'generar_rsa';
     else if (accion === Acciones.GENERAR_AES) fnName = 'generar_aes';
+    else if (accion === Acciones.CIFRAR_PINTURA) fnName = 'cifrar_pintura';
+    else if (accion === Acciones.DESCIFRAR_PINTURA) fnName = 'descifrar_pintura';
+    else if (accion === Acciones.VERIFICAR_LLAVE_AES) fnName = 'verificar_llave_aes';
+    else if (accion === Acciones.FIRMAR_CONSENTIMIENTO) fnName = 'firmar_consentimiento';
     else if (accion === Acciones.GENERAR_ECDSA) fnName = 'generar_ecdsa_keys';
     else if (accion === Acciones.INYECCION_LLAVE_PRIVADA) fnName = 'inyectar_llave_privada';
     else if (accion === Acciones.FIRMAR_MENSAJE_ECDSA) fnName = 'firmar_mensaje';
@@ -76,17 +84,19 @@ self.onmessage = async (e: MessageEvent) => {
     if (fnName) {
       //obtenemos la funcion de pyodide
       const fnPython = pyodide.globals.get(fnName);
-      //ejecutamos la funcion
-      const resultPython = fnPython(payload || {});
-      //el resultado de la funcion lo convertimos en un formato que typescript entienda
-      const resultJS = resultPython.toJs({ dict_converter: Object.fromEntries });
-
-      //Mandamos respuesta a React
-      self.postMessage({ id, status: Status.EXITO, data: resultJS });
-      
-      //Borramos para liberar memoria
-      resultPython.destroy();
-      fnPython.destroy();
+      const payloadPython = pyodide.toPy(payload || {});
+      let resultPython: any;
+      try {
+        //ejecutamos la funcion
+        resultPython = fnPython(payloadPython);
+        //el resultado de la funcion lo convertimos en un formato que typescript entienda
+        const resultJS = resultPython.toJs({ dict_converter: Object.fromEntries });
+        self.postMessage({ id, status: Status.EXITO, data: resultJS });
+      } finally {
+        resultPython?.destroy?.();
+        payloadPython.destroy();
+        fnPython.destroy();
+      }
     }
   } catch (error: any) {
     self.postMessage({ id: e.data.id, status: Status.ERROR, error: error.message });

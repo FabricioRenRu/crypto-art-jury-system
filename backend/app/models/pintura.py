@@ -4,11 +4,9 @@ from sqlalchemy import ForeignKey, func, String, Text, DateTime
 from datetime import datetime
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
-from typing import List
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from app.models.pintor import Pintor
-    from app.models.sobrellave import SobreLlave
     from app.models.evaluacion import Evaluacion
 
 
@@ -40,15 +38,11 @@ class Pintura(Base):
         nullable=False
     )
 
-    # Tipo MIME detectado por el servidor al subir (para devolverle la imagen al dueno)
+    # Tipo MIME declarado por el cliente; el archivo permanece cifrado en el servidor.
     mime_type: Mapped[str] = mapped_column(String(50), nullable=False)
 
     # SHA-256 (hex) del archivo cifrado; va dentro del consentimiento firmado
     hash_pintura_cifrada: Mapped[str] = mapped_column(String(64), nullable=False)
-
-    # K_AES cifrada con una llave derivada de la privada ECDSA del pintor (para que
-    # solo el pueda volver a ver su obra). Nunca se guarda K_AES en claro.
-    llave_aes_pintor_cifrada: Mapped[str] = mapped_column(Text, nullable=False)
 
     creado_en: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -73,15 +67,8 @@ class Pintura(Base):
         back_populates="pintura"
     )
 
-    # relacion 1:N con SobreLLave
-    sobres: Mapped[List["SobreLlave"]] = relationship(
-        "SobreLlave", 
-        back_populates="pintura"
-    )
-
     # relacion 1:N con evaluacion
-    evaluaciones: Mapped[List["Evaluacion"]] = relationship(
+    evaluaciones: Mapped[list["Evaluacion"]] = relationship(
         "Evaluacion", 
         back_populates="pintura"
     )
-

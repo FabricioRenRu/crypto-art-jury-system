@@ -1,14 +1,13 @@
 /**
  * pages/RequireVault.tsx
  * Pide el .pem si la llave no está cargada en la sesión.
- *  - Pintor: la llave vive en la RAM del backend (se pierde si el servidor se reinicia).
+ *  - Pintor: la llave vive solo en la RAM del worker (se pierde al recargar).
  *  - Jurado: la llave vive en la RAM del worker de Pyodide (se pierde con F5).
  */
 import { useState, useEffect, useRef } from 'react';
 import { useCryptoWorker } from '../hooks/useCryptoWorker';
 import { Acciones } from '../workers/crypto.worker';
 import { Navigate } from 'react-router-dom';
-import { authService } from '../services/authService';
 import { PATHS } from '../routes/paths';
 
 export default function RequireVault({ children, rol }: { children: React.ReactNode, rol: string }) {
@@ -19,10 +18,7 @@ export default function RequireVault({ children, rol }: { children: React.ReactN
   const esPintor = rol === 'pintor';
 
   useEffect(() => {
-    const consulta = esPintor
-      ? authService.estadoLlavePintor()
-      : ejecutarAccion(Acciones.VERIFICAR_BOVEDA);
-    consulta
+    ejecutarAccion(Acciones.VERIFICAR_BOVEDA)
       .then((res: { lista: boolean }) => setBovedaLista(res.lista))
       .catch(() => setBovedaLista(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -38,7 +34,7 @@ export default function RequireVault({ children, rol }: { children: React.ReactN
       const llaveTexto = evento.target?.result as string;
       try {
         if (esPintor) {
-          await authService.cargarLlavePintor(llaveTexto);
+          await ejecutarAccion(Acciones.INYECCION_LLAVE_PRIVADA, { pem: llaveTexto, rol });
         } else {
           await ejecutarAccion(Acciones.INYECCION_LLAVE_PRIVADA, { pem: llaveTexto, rol });
         }

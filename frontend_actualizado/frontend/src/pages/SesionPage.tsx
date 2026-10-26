@@ -12,7 +12,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import Icon from '../components/ui/Icon';
 import { PATHS } from '../routes/paths';
 import { useLogin, type RolLogin } from '../hooks/useLogin';
-import { authService } from '../services/authService';
 import { useCryptoWorker } from '../hooks/useCryptoWorker';
 import { Acciones } from '../workers/crypto.worker'
 
@@ -59,8 +58,7 @@ export default function SesionPage() {
       
       try {
         if (rol === 'pintor') {
-          // El backend valida que el .pem corresponda a tu llave pública y lo deja solo en RAM
-          await authService.cargarLlavePintor(llaveTexto);
+          await ejecutarAccion(Acciones.INYECCION_LLAVE_PRIVADA, { pem: llaveTexto, rol });
         } else {
           // El jurado sigue usando la RAM del worker
           await ejecutarAccion(Acciones.INYECCION_LLAVE_PRIVADA, { pem: llaveTexto, rol: rol });

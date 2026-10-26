@@ -7,7 +7,7 @@ def find_by_email(db: Session, email: str) -> Optional[Jurado]:
 
 
 def find_jueces(db: Session) -> list[Jurado]:
-    """Solo los JUEZ (el presidente no recibe sobres: firma a ciegas)."""
+    """Devuelve los jueces, excluyendo al presidente."""
     return (
         db.query(Jurado)
         .filter(Jurado.rol == RolJurado.JUEZ)

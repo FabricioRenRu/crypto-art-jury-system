@@ -9,8 +9,6 @@ export const ENDPOINTS = {
     REGISTRO_PINTOR: '/api/auth/pintores/registro',
     LOGIN_PINTOR: '/api/auth/pintores/login',
     LOGIN_JURADO: '/api/auth/jurados/login',
-    LLAVE_PINTOR: '/api/auth/pintores/llave',
-    ESTADO_LLAVE_PINTOR: '/api/auth/pintores/llave/estado',
   },
   
   // Rutas de Pintores

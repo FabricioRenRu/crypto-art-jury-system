@@ -5,9 +5,7 @@
  * Formulario de inscripción con foto de perfil, datos de acceso y certificación
  * de autoría humana. Al enviarlo llama al backend con el hook useRegisterPainter.
  *
- * Nota: el backend (PainterCreate) solo recibe nombre, correo, contraseña y categoría.
- * El diseño no tiene selector de categoría, por eso se manda DEFAULT_CATEGORY;
- * el seudónimo y la foto se quedan en el formulario hasta que el backend los soporte.
+ * La llave ECDSA se genera localmente; solo la llave pública acompaña la petición de registro.
  */
 import { useState, useEffect } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
@@ -273,7 +271,7 @@ export default function RegistroPintorPage() {
                         ID: <span className="font-mono text-xs">{result.id}</span>
                       </div>
                       <p className="text-xs text-primary-container mt-2 font-medium">
-                        ⚠️ Hemos descargado tu Llave Privada (.pem). El servidor NO la guarda: sin este archivo no podrás firmar. Guárdala en un lugar seguro. Redirigiendo al inicio de sesión...
+                        ⚠️ La llave privada se generó en tu dispositivo y se descargó tras confirmar el registro. El servidor solo recibió la llave pública. Guarda el archivo .pem en un lugar seguro: lo necesitarás para firmar. Redirigiendo al inicio de sesión...
                       </p>
                     </div>
                   </div>

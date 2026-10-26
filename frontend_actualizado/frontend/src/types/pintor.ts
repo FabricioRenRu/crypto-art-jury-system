@@ -1,14 +1,14 @@
 /**
  * types/pintor.ts
  * Tipos del pintor. Deben coincidir con los schemas del backend.
- * El par ECDSA lo genera el servidor al registrar: guarda solo la pública y entrega la
- * privada UNA vez para que el usuario la descargue (el servidor no la persiste).
+ * El par ECDSA se genera en el frontend; el servidor recibe y persiste solo la pública.
  */
 export interface PintorCreate {
   nombre: string;
   seudonimo: string;
   email: string;
   contrasena: string;
+  clave_publica_ecdsa: string;
   foto_perfil_b64: string | null;
 }
 
@@ -16,15 +16,6 @@ export interface PintorResponse {
   id: string;
   email: string;
   clave_publica_ecdsa: string;
-}
-
-/** Respuesta del registro: incluye la privada una sola vez. */
-export interface PintorRegistroResponse extends PintorResponse {
-  clave_privada_pem: string;
-}
-
-export interface EstadoLlaveResponse {
-  lista: boolean;
 }
 
 /** GET /api/pintores/me */
@@ -43,6 +34,7 @@ export interface PinturaResponse {
   titulo: string;
   descripcion: string;
   estado: string;
+  tipo_mime: string;
   hash_pintura_cifrada: string;
   firma_consentimiento: string;
 }

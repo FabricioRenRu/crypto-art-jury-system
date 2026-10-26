@@ -2,6 +2,9 @@
 public/python/ecdsa_utils.py
 """
 
+import json
+from datetime import datetime, timezone
+
 from Crypto.PublicKey import ECC
 from Crypto.Signature import DSS
 from Crypto.Hash import SHA256
@@ -47,3 +50,25 @@ def firmar_mensaje(payload: PayloadFirma):
     # Retornar firma en hexadecimal para fácil transporte
     return {"firma_hex": signature.hex()}
 
+
+def firmar_consentimiento(payload_js):
+    """Construye y firma el documento de consentimiento con la llave privada local."""
+    payload = payload_js.to_py() if hasattr(payload_js, "to_py") else payload_js
+    documento = json.dumps(
+        {
+            "tipo": "consentimiento_participacion",
+            "version": 1,
+            "id_pintura": str(payload["id_pintura"]),
+            "id_pintor": str(payload["id_pintor"]),
+            "algoritmo_cifrado": "AES-256-GCM",
+            "hash_sha256_pintura_cifrada": payload["hash_cifrado"],
+            "fecha_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "declaracion": "Certifico la autoria humana de la obra y autorizo su exhibicion.",
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    )
+    llave = ECC.import_key(obtener_llave_actual())
+    firma = DSS.new(llave, "fips-186-3").sign(SHA256.new(documento.encode("utf-8")))
+    return {"documento": documento, "firma_hex": firma.hex()}

@@ -4,7 +4,7 @@
  * puedan interactuar con el worker
  * 
  */
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Status, Acciones } from '../workers/crypto.worker'; 
 
@@ -67,7 +67,7 @@ export function CryptoProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Nueva función puente con async/await
-  const ejecutarAccion = (accion: string, payload?: any): Promise<any> => {
+  const ejecutarAccion = useCallback((accion: string, payload?: any): Promise<any> => {
     return new Promise((resolve, reject) => {
       if (!workerRef.current) {
         reject("El motor criptográfico no está inicializado");
@@ -82,7 +82,7 @@ export function CryptoProvider({ children }: { children: ReactNode }) {
       //Se envian los datos al worker
       workerRef.current.postMessage({ id, accion, payload });
     });
-  };
+  }, []);
   //Renderiza el componente nativo Provider de React, 
   // inyectandole el estado y la funcion puente, 
   // y muestra adentro a todos los children

@@ -8,9 +8,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { API_URL } from '../api/apiClient';
 import { DEFAULT_AVATAR_URL } from '../data/assets';
 import { painterService } from '../services/painterService';
+import { useCryptoWorker } from './useCryptoWorker';
+import { Acciones } from '../workers/crypto.worker';
 import type { PainterArtwork, PainterProfile } from '../types';
 import type { PinturaResponse } from '../types/pintor';
 import type { UploadArtworkData } from '../components/painter/UploadArtworkModal';
+import type { PinturaCifrada } from '../services/painterService';
 
 const PERFIL_VACIO: PainterProfile = {
   name: '',
@@ -18,7 +21,21 @@ const PERFIL_VACIO: PainterProfile = {
   avatarUrl: DEFAULT_AVATAR_URL,
 };
 
+function obtenerIdPintorDeSesion(): string {
+  const token = sessionStorage.getItem('access_token');
+  const segmento = token?.split('.')[1];
+  if (!segmento) throw new Error('La sesión del pintor no es válida.');
+
+  const base64 = segmento.replace(/-/g, '+').replace(/_/g, '/');
+  const payload = JSON.parse(atob(base64));
+  if (typeof payload.sub !== 'string') {
+    throw new Error('No se encontró el identificador del pintor en la sesión.');
+  }
+  return payload.sub;
+}
+
 export const usePainterPanel = () => {
+  const { ejecutarAccion } = useCryptoWorker();
   const [profile, setProfile] = useState<PainterProfile>(PERFIL_VACIO);
   const [artworks, setArtworks] = useState<PainterArtwork[]>([]);
   const [totalSlots, setTotalSlots] = useState(1);
@@ -30,12 +47,20 @@ export const usePainterPanel = () => {
 
   const aArtwork = useCallback(async (obra: PinturaResponse): Promise<PainterArtwork> => {
     let imageUrl = '';
-    try {
-      const blob = await painterService.obtenerImagen(obra.id);
-      imageUrl = URL.createObjectURL(blob);
+    const llaveDisponible = await ejecutarAccion(Acciones.VERIFICAR_LLAVE_AES, {
+      id_pintura: obra.id,
+    });
+    if (llaveDisponible.disponible) {
+      const blobCifrado = await painterService.obtenerImagen(obra.id);
+      const resultado = await ejecutarAccion(Acciones.DESCIFRAR_PINTURA, {
+        id_pintura: obra.id,
+        cifrado: new Uint8Array(await blobCifrado.arrayBuffer()),
+      });
+      const datos = new Uint8Array(resultado.datos);
+      const imagen = new ArrayBuffer(datos.byteLength);
+      new Uint8Array(imagen).set(datos);
+      imageUrl = URL.createObjectURL(new Blob([imagen], { type: obra.tipo_mime }));
       urlsRef.current.push(imageUrl);
-    } catch {
-      // si no se puede descifrar, la tarjeta se muestra sin imagen
     }
     return {
       id: obra.id,
@@ -46,7 +71,7 @@ export const usePainterPanel = () => {
       status: obra.estado,
       imageUrl,
     };
-  }, []);
+  }, [ejecutarAccion]);
 
   const cargar = useCallback(async () => {
     setIsLoading(true);
@@ -75,11 +100,37 @@ export const usePainterPanel = () => {
     return () => urlsRef.current.forEach((u) => URL.revokeObjectURL(u));
   }, [cargar]);
 
-  /** Envía la obra; el servidor la cifra, firma el consentimiento y crea los sobres. */
+  /** Cifra la obra y firma el consentimiento en el navegador antes de subirlos. */
   const uploadArtwork = async (data: UploadArtworkData) => {
     setError(null);
     try {
-      const obra = await painterService.cargarObra(data.file, data.title, data.description);
+      if (!['image/png', 'image/jpeg', 'image/webp'].includes(data.file.type)) {
+        throw new Error('Formato no soportado. Sube una imagen PNG, JPG o WEBP.');
+      }
+
+      const idPintura = crypto.randomUUID();
+      const cifrado = await ejecutarAccion(Acciones.CIFRAR_PINTURA, {
+        id_pintura: idPintura,
+        datos: new Uint8Array(await data.file.arrayBuffer()),
+      });
+      const consentimiento = await ejecutarAccion(Acciones.FIRMAR_CONSENTIMIENTO, {
+        id_pintura: idPintura,
+        id_pintor: obtenerIdPintorDeSesion(),
+        hash_cifrado: cifrado.hash_cifrado,
+      });
+      const pintura: PinturaCifrada = {
+        id_pintura: idPintura,
+        cifrado: cifrado.cifrado,
+      };
+      const obra = await painterService.cargarObra(
+        pintura,
+        consentimiento.documento,
+        consentimiento.firma_hex,
+        data.file.type,
+        data.file.size,
+        data.title,
+        data.description,
+      );
       const nueva = await aArtwork(obra);
       setArtworks((actuales) => [...actuales, nueva]);
     } catch (err: any) {

@@ -27,20 +27,28 @@ def mis_obras(
 @router.post("/cargar", response_model=PinturaResponse, status_code=201)
 def cargar_pintura(
     archivo: UploadFile = File(...),
+    id_pintura: uuid.UUID = Form(...),
+    tipo_mime: str = Form(...),
+    tamano_original: int = Form(...),
+    documento_consentimiento: str = Form(...),
+    firma_consentimiento: str = Form(...),
     titulo: str = Form(...),
     descripcion: str = Form(...),
     payload: dict = Depends(require_pintor),
     db: Session = Depends(get_db)
 ):
     """
-    Explicación: Recibe la imagen en claro (por HTTPS), la cifra con AES-256-GCM, genera y firma
-    con ECDSA el consentimiento, crea un sobre RSA-OAEP por juez y guarda todo en la BD.
-    Espera recibir: multipart/form-data con `archivo`, `titulo` y `descripcion` + JWT de pintor.
+    Explicación: Recibe la imagen cifrada y el consentimiento firmado en el navegador,
+    verifica la firma ECDSA y guarda el paquete cifrado.
+    Espera recibir: multipart/form-data con el archivo cifrado, metadatos y consentimiento + JWT.
     Espera devolver: La obra creada (id, titulo, descripcion, estado, hash y firma del consentimiento).
     """
     # Se lee un byte de mas para detectar archivos que superan el limite sin cargarlos enteros
-    contenido: bytes = archivo.file.read(pinturas_service.MAX_BYTES + 1)
-    return pinturas_service.cargar_pintura(db, payload, contenido, titulo, descripcion)
+    contenido: bytes = archivo.file.read(pinturas_service.MAX_BYTES + 29)
+    return pinturas_service.cargar_pintura(
+        db, payload, contenido, id_pintura, tipo_mime, tamano_original,
+        documento_consentimiento, firma_consentimiento, titulo, descripcion,
+    )
 
 
 @router.get("/{id_pintura}/imagen", response_model=None)
@@ -50,18 +58,13 @@ def imagen_de_mi_pintura(
     db: Session = Depends(get_db)
 ):
     """
-    Explicación: Devuelve descifrada la obra a su propio dueño (para la tarjeta del panel).
+    Explicación: Devuelve el paquete cifrado; solo el frontend puede descifrarlo en esta sesión.
     Espera recibir: `id_pintura` en la ruta + JWT de pintor.
-    Espera devolver: Los bytes de la imagen con su Content-Type.
+    Espera devolver: Los bytes cifrados de la imagen.
     """
-    claro, mime = pinturas_service.obtener_imagen_del_dueno(db, payload, id_pintura)
-    return Response(content=claro, media_type=mime, headers={"Cache-Control": "private, no-store"})
-
-@router.get("/{id_pintura}/descargar", response_model=None)
-def descargar_pintura(id_pintura: uuid.UUID):
-    """
-    Explicación: Proporciona a un juez el archivo cifrado de la obra y el sobre con la llave simétrica específica para él.
-    Espera recibir: El `id_pintura` en la ruta. (En un caso real, también el ID o token del juez autenticado).
-    Espera devolver: El archivo binario de la pintura y el `SobreLlave` (la llave AES encriptada con RSA) correspondiente a ese juez.
-    """
-    pass
+    cifrado = pinturas_service.obtener_imagen_cifrada_del_dueno(db, payload, id_pintura)
+    return Response(
+        content=cifrado,
+        media_type="application/octet-stream",
+        headers={"Cache-Control": "private, no-store"},
+    )

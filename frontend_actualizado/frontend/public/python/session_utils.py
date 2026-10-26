@@ -2,6 +2,9 @@
 public/python/session_utils.py
 """
 from typing import TypedDict, Any
+from Crypto.PublicKey import ECC
+from Crypto.PublicKey import RSA
+from aes_utils import limpiar_llaves_sesion
 
 class PayloadLlave(TypedDict):
     pem: str
@@ -18,7 +21,16 @@ def inyectar_llave_privada(payload_js: Any) -> dict[str, str]:
     """
     Guarda la llave en la variable global y confirma exito
     """
-    payload: PayloadLlave = payload_js.to_py()
+    payload: PayloadLlave = payload_js.to_py() if hasattr(payload_js, "to_py") else payload_js
+    if payload["rol"] == "pintor":
+        llave = ECC.import_key(payload["pem"])
+        if not llave.has_private() or llave.curve not in ("NIST P-256", "P-256", "secp256r1"):
+            raise ValueError("Se requiere una llave privada ECDSA P-256 válida.")
+    else:
+        llave = RSA.import_key(payload["pem"])
+        if not llave.has_private():
+            raise ValueError("Se requiere una llave privada RSA válida.")
+    limpiar_llaves_sesion()
     estado_sesion["llave_privada_pem"] = payload["pem"]
     estado_sesion["rol"] = payload["rol"]
     
