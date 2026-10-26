@@ -1,20 +1,66 @@
 """
 seed_jurados.py
-Script para guardar los 3 jueces y el presidente en la base de datos
-Este script genera sus respectivas par de llaves RSA y solo se puede ejecutar 1 vez
+Script para guardar los 3 jueces y el presidente en la base de datos.
+A cada juez le genera su par de llaves RSA-2048: la publica va a la BD (para los sobres
+RSA-OAEP) y la privada se exporta a un .pem que se le entrega al juez.
+Si los jurados ya existen, solo genera llaves para los jueces que aun no tienen.
 """
+from Crypto.PublicKey import RSA
 from app.database.connection import SessionLocal
 from app.models.jurado import Jurado, RolJurado
 from app.utils.security import get_password_hash
 from typing import Any
 from sqlalchemy.orm import Session
 
+BITS_LLAVE_RSA = 2048
+
+
+def generar_llaves_rsa() -> tuple[str, str]:
+    """Genera un par de llaves RSA de 2048 bits en PEM."""
+    llave: RSA.RsaKey = RSA.generate(BITS_LLAVE_RSA)
+    privada_pem: str = llave.export_key().decode('utf-8')
+    publica_pem: str = llave.publickey().export_key().decode('utf-8')
+    return privada_pem, publica_pem
+
+
+def guardar_llave_privada(nombre: str, llave_privada: str):
+    """Guarda la llave privada en un archivo .pem en tu disco duro."""
+    filename: str = f"llave_privada_{nombre.lower().replace(' ', '_')}.pem"
+    with open(filename, "w") as f:
+        f.write(llave_privada)
+    print(f"Llave privada exportada a: {filename}")
+
+
+def asignar_llaves_rsa(jurado: Jurado):
+    privada, publica = generar_llaves_rsa()
+    guardar_llave_privada(jurado.nombre, privada)
+    jurado.clave_publica_rsa = publica
+
+
+def completar_llaves_jueces(db: Session):
+    """Para una BD ya creada sin llaves RSA (version anterior de este script)."""
+    jueces_sin_llave = (
+        db.query(Jurado)
+        .filter(Jurado.rol == RolJurado.JUEZ, Jurado.clave_publica_rsa.is_(None))
+        .all()
+    )
+    if len(jueces_sin_llave) == 0:
+        print("Los jurados ya están registrados y todos los jueces tienen llave RSA.")
+        return
+
+    for juez in jueces_sin_llave:
+        print(f"Generando llaves RSA para {juez.nombre}")
+        asignar_llaves_rsa(juez)
+    db.commit()
+    print(f"Se generaron llaves RSA para {len(jueces_sin_llave)} jueces")
+
+
 def seed_jurados():
     db: Session = SessionLocal()
     try:
         # Verificar si ya existen para no duplicarlos
         if db.query(Jurado).count() > 0:
-            print("Los jurados ya están registrados en la base de datos.")
+            completar_llaves_jueces(db)
             return
 
         print(" Iniciando el Protocolo de Generación de Jurados...\n")
@@ -38,6 +84,12 @@ def seed_jurados():
                 password=password_hash,
                 rol=perfil['rol']
             )
+
+            # Solo los jueces reciben sobres; el presidente firma a ciegas
+            if perfil['rol'] == RolJurado.JUEZ:
+                print(f"Generando llaves RSA para {perfil['nombre']}")
+                asignar_llaves_rsa(nuevo_jurado)
+
             db.add(nuevo_jurado)
             print(f"{perfil['nombre']} insertado en la BD con contraseña: {password_plana}\n")
 

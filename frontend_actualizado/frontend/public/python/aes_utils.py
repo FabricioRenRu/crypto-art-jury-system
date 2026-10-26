@@ -84,5 +84,20 @@ def verificar_llave_aes(payload_js):
     return {"disponible": str(payload["id_pintura"]) in _LLAVES_AES_SESION}
 
 
+def obtener_llave_sesion(id_pintura):
+    """K_AES de una obra en bytes, o None si no esta en esta sesion (la usan los sobres)."""
+    llave_b64 = _LLAVES_AES_SESION.get(str(id_pintura))
+    if llave_b64 is None:
+        return None
+    return base64.b64decode(llave_b64, validate=True)
+
+
+def guardar_llave_sesion(id_pintura, llave):
+    """Guarda K_AES recuperada de un sobre para que descifrar_pintura la encuentre."""
+    if len(llave) != TAM_LLAVE:
+        raise ValueError("La llave AES debe medir 32 bytes.")
+    _LLAVES_AES_SESION[str(id_pintura)] = _b64(llave)
+
+
 def limpiar_llaves_sesion():
     _LLAVES_AES_SESION.clear()

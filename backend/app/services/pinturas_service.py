@@ -1,4 +1,6 @@
-"""Persistencia de pinturas cifradas y verificación del consentimiento del pintor."""
+"""Persistencia de pinturas cifradas, sobres RSA-OAEP y verificación del consentimiento del pintor."""
+import base64
+import binascii
 import json
 import logging
 import os
@@ -10,6 +12,7 @@ from sqlalchemy.orm import Session
 
 import app.repositories.pinturas_repository as pinturas_repository
 import app.repositories.pintores_repository as pintores_repository
+import app.services.jurado_service as jurado_service
 from app.exceptions.custom_exceptions import (
     ArchivoDemasiadoGrandeException,
     ArchivoInvalidoException,
@@ -18,6 +21,8 @@ from app.exceptions.custom_exceptions import (
 )
 from app.models.evaluacion import EstadoEvaluacion
 from app.models.pintura import Pintura
+from app.models.sobrellave import SobreLlave
+from app.schemas.jurado_schemas import PinturaCifradaJuezResponse
 from app.schemas.pintor_schemas import MisObrasResponse, PerfilPintorResponse, PinturaResponse
 from app.utils import crypto
 
@@ -51,6 +56,39 @@ def _a_response(pintura: Pintura) -> PinturaResponse:
         hash_pintura_cifrada=pintura.hash_pintura_cifrada,
         firma_consentimiento=pintura.firma_consentimiento,
     )
+
+
+def _validar_sobres(db: Session, sobres_json: str) -> list[tuple[uuid.UUID, str]]:
+    """
+    Los sobres llegan del navegador como {"<id_juez>": "<CK en base64>"}. El servidor no puede
+    abrirlos; solo revisa que haya exactamente uno por juez y que cada uno mida lo que mide
+    un bloque RSA de la llave de ese juez (256 bytes con RSA-2048).
+    """
+    try:
+        sobres = json.loads(sobres_json)
+    except json.JSONDecodeError as exc:
+        raise ArchivoInvalidoException("Los sobres de llave no son un JSON valido.") from exc
+    if not isinstance(sobres, dict):
+        raise ArchivoInvalidoException("Los sobres de llave deben ser un objeto {id_juez: sobre}.")
+
+    llaves_jurado = jurado_service.obtener_llaves_publicas(db)
+    ids_esperados = set()
+    for juez in llaves_jurado.jueces:
+        ids_esperados.add(str(juez.id))
+    if set(sobres.keys()) != ids_esperados:
+        raise ArchivoInvalidoException("Se necesita exactamente un sobre de llave por cada juez.")
+
+    validados = []
+    for juez in llaves_jurado.jueces:
+        sobre_b64 = sobres[str(juez.id)]
+        try:
+            sobre = base64.b64decode(sobre_b64, validate=True)
+        except (binascii.Error, TypeError, ValueError) as exc:
+            raise ArchivoInvalidoException("Un sobre de llave no esta en base64.") from exc
+        if len(sobre) != juez.bits // 8:
+            raise ArchivoInvalidoException("Un sobre de llave no tiene el tamano de un bloque RSA.")
+        validados.append((juez.id, sobre_b64))
+    return validados
 
 
 def _ruta_absoluta(ruta_relativa: str) -> str:
@@ -95,6 +133,7 @@ def cargar_pintura(
     firma_hex: str,
     titulo: str,
     descripcion: str,
+    sobres_json: str,
 ) -> PinturaResponse:
     id_pintor = uuid.UUID(payload_token["sub"])
 
@@ -155,6 +194,11 @@ def cargar_pintura(
 
     hash_cifrado = crypto.sha256_hex(contenido)
 
+    # CK = RSA-OAEP(PK_juez, K_AES): se armaron en el navegador, aqui solo se validan
+    sobres = []
+    for id_juez, sobre_b64 in _validar_sobres(db, sobres_json):
+        sobres.append(SobreLlave(id_pintura=id_pintura, id_jurado=id_juez, llave_aes_cifrada=sobre_b64))
+
     # --- Persistir el archivo cifrado y su consentimiento ------------------- #
     nombre_archivo = f"{id_pintura}.bin"
     ruta_disco = _ruta_absoluta(nombre_archivo)
@@ -173,7 +217,7 @@ def cargar_pintura(
         firma_consentimiento=firma_hex,
     )
     try:
-        pinturas_repository.save(db, pintura)
+        pinturas_repository.save_con_sobres(db, pintura, sobres)
     except IntegrityError:
         db.rollback()
         os.remove(ruta_disco)
@@ -202,3 +246,32 @@ def obtener_imagen_cifrada_del_dueno(
     except FileNotFoundError as exc:
         logger.error("No se encontró el paquete cifrado de la pintura %s", pintura.id)
         raise RecursoNoEncontradoException("No se pudo recuperar la imagen.") from exc
+
+
+def descargar_para_juez(db: Session, payload_token: dict, id_pintura: uuid.UUID) -> PinturaCifradaJuezResponse:
+    """Entrega al juez la obra cifrada y SU sobre; K_AES se recupera en su navegador."""
+    pintura = pinturas_repository.find_by_id(db, id_pintura)
+    if pintura is None:
+        raise RecursoNoEncontradoException("Pintura no encontrada")
+
+    sobre = pinturas_repository.find_sobre(db, id_pintura, uuid.UUID(payload_token["sub"]))
+    if sobre is None:
+        # Sin sobre para este juez la obra no se le asigno
+        raise RecursoNoEncontradoException("No tienes un sobre de llave para esta pintura")
+
+    try:
+        with open(_ruta_absoluta(pintura.ruta_pintura_cifrada), "rb") as f:
+            paquete = f.read()
+    except FileNotFoundError as exc:
+        logger.error("No se encontró el paquete cifrado de la pintura %s", pintura.id)
+        raise RecursoNoEncontradoException("No se pudo recuperar la pintura cifrada.") from exc
+
+    return PinturaCifradaJuezResponse(
+        id_pintura=pintura.id,
+        titulo=pintura.titulo,
+        descripcion=pintura.descripcion,
+        tipo_mime=pintura.mime_type,
+        pintura_cifrada=base64.b64encode(paquete).decode("ascii"),
+        hash_pintura_cifrada=pintura.hash_pintura_cifrada,
+        sobre_llave=sobre.llave_aes_cifrada,
+    )

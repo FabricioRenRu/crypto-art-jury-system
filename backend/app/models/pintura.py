@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from app.models.pintor import Pintor
     from app.models.evaluacion import Evaluacion
+    from app.models.sobrellave import SobreLlave
 
 
 class Pintura(Base):
@@ -64,6 +65,12 @@ class Pintura(Base):
     # relacion 1:1 con Pintor
     pintor: Mapped["Pintor"]  = relationship(
         "Pintor", 
+        back_populates="pintura"
+    )
+
+    # relacion 1:N con SobreLlave (un sobre RSA-OAEP por juez)
+    sobres: Mapped[list["SobreLlave"]] = relationship(
+        "SobreLlave", 
         back_populates="pintura"
     )
 

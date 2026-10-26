@@ -24,6 +24,8 @@ export const ENDPOINTS = {
     CARGAR: '/api/pinturas/cargar',
     MIS_OBRAS: '/api/pinturas/mis-obras',
     IMAGEN: (idPintura: string) => `/api/pinturas/${idPintura}/imagen`,
+    // Obra cifrada + sobre RSA-OAEP del juez autenticado
+    DESCARGAR: (idPintura: string) => `/api/pinturas/${idPintura}/descargar`,
     DETALLE: (idPintura: string) => `/api/pinturas/${idPintura}`,
     
     // Ejemplo combinando Path y Query Parameters (ej. /pinturas/pintor/123?estado=evaluada)
@@ -31,6 +33,12 @@ export const ENDPOINTS = {
       const url = `/api/pinturas/pintor/${idPintor}`;
       return estado ? `${url}?estado=${estado}` : url;
     }
+  },
+
+  // Rutas del Jurado
+  JURADO: {
+    // Llaves publicas RSA de los jueces (para los sobres de llave)
+    LLAVES_PUBLICAS: '/api/jurado/llaves-publicas',
   },
 
   // Rutas de Chaum / Jurado

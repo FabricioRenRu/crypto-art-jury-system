@@ -16,6 +16,8 @@ export const Acciones = {
   CIFRAR_PINTURA: "CIFRAR_PINTURA",
   DESCIFRAR_PINTURA: "DESCIFRAR_PINTURA",
   VERIFICAR_LLAVE_AES: "VERIFICAR_LLAVE_AES",
+  GENERAR_SOBRES: "GENERAR_SOBRES",
+  ABRIR_SOBRE: "ABRIR_SOBRE",
   FIRMAR_CONSENTIMIENTO: "FIRMAR_CONSENTIMIENTO",
   GENERAR_ECDSA: "GENERAR_ECDSA",
   INYECCION_LLAVE_PRIVADA: "INYECCION_LLAVE_PRIVADA",
@@ -45,6 +47,7 @@ async function init() {
   const aesCode = await (await fetch('/python/aes_utils.py')).text();
   const ecdsaCode = await (await fetch('/python/ecdsa_utils.py')).text();
   const sessionCode = await (await fetch('/python/session_utils.py')).text();
+  const sobreCode = await (await fetch('/python/sobre_llave_utils.py')).text();
   
   //pyodide.FS.writeFile() escrive el texto/codigo fuente para escribir ese
   //texto en el Sistema de archivos virtual en Memoria (VFS) de Pyodide
@@ -52,6 +55,7 @@ async function init() {
   pyodide.FS.writeFile('aes_utils.py', aesCode);
   pyodide.FS.writeFile('ecdsa_utils.py', ecdsaCode);
   pyodide.FS.writeFile('session_utils.py', sessionCode);
+  pyodide.FS.writeFile('sobre_llave_utils.py', sobreCode);
 
   // Ejecutamos el main
   const mainCode = await (await fetch('/python/main.py')).text();
@@ -75,6 +79,8 @@ self.onmessage = async (e: MessageEvent) => {
     else if (accion === Acciones.CIFRAR_PINTURA) fnName = 'cifrar_pintura';
     else if (accion === Acciones.DESCIFRAR_PINTURA) fnName = 'descifrar_pintura';
     else if (accion === Acciones.VERIFICAR_LLAVE_AES) fnName = 'verificar_llave_aes';
+    else if (accion === Acciones.GENERAR_SOBRES) fnName = 'generar_sobres';
+    else if (accion === Acciones.ABRIR_SOBRE) fnName = 'abrir_sobre';
     else if (accion === Acciones.FIRMAR_CONSENTIMIENTO) fnName = 'firmar_consentimiento';
     else if (accion === Acciones.GENERAR_ECDSA) fnName = 'generar_ecdsa_keys';
     else if (accion === Acciones.INYECCION_LLAVE_PRIVADA) fnName = 'inyectar_llave_privada';

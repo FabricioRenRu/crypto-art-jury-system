@@ -1,13 +1,14 @@
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import String, func, Enum as SQLEnum
+from sqlalchemy import String, Text, func, Enum as SQLEnum
 from enum import Enum
 from app.models.base import Base
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
-from typing import List
+from typing import List, Optional
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from app.models.evaluacion import Evaluacion
+    from app.models.sobrellave import SobreLlave
 
 
 class RolJurado(str, Enum):
@@ -41,5 +42,10 @@ class Jurado(Base):
     )
     
     rol: Mapped[RolJurado] = mapped_column(SQLEnum(RolJurado), nullable=False)
+
+    # Llave publica RSA (PEM) para cifrarle los sobres. El presidente no tiene (firma a ciegas)
+    clave_publica_rsa: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
     # Relaciones
+    sobres: Mapped[List["SobreLlave"]] = relationship("SobreLlave", back_populates="juez")
     evaluaciones: Mapped[List["Evaluacion"]] = relationship("Evaluacion", back_populates="juez")

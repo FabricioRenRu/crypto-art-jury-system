@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { API_URL } from '../api/apiClient';
 import { DEFAULT_AVATAR_URL } from '../data/assets';
 import { painterService } from '../services/painterService';
+import { juradoService } from '../services/juradoService';
 import { useCryptoWorker } from './useCryptoWorker';
 import { Acciones } from '../workers/crypto.worker';
 import type { PainterArtwork, PainterProfile } from '../types';
@@ -100,7 +101,7 @@ export const usePainterPanel = () => {
     return () => urlsRef.current.forEach((u) => URL.revokeObjectURL(u));
   }, [cargar]);
 
-  /** Cifra la obra y firma el consentimiento en el navegador antes de subirlos. */
+  /** Cifra la obra, firma el consentimiento y envuelve K_AES para cada juez antes de subirlos. */
   const uploadArtwork = async (data: UploadArtworkData) => {
     setError(null);
     try {
@@ -112,6 +113,12 @@ export const usePainterPanel = () => {
       const cifrado = await ejecutarAccion(Acciones.CIFRAR_PINTURA, {
         id_pintura: idPintura,
         datos: new Uint8Array(await data.file.arrayBuffer()),
+      });
+      // Se bajan las llaves públicas del jurado y el worker arma un sobre RSA-OAEP por juez
+      const llavesJurado = await juradoService.obtenerLlavesPublicas();
+      const sobres = await ejecutarAccion(Acciones.GENERAR_SOBRES, {
+        id_pintura: idPintura,
+        jueces: llavesJurado.jueces,
       });
       const consentimiento = await ejecutarAccion(Acciones.FIRMAR_CONSENTIMIENTO, {
         id_pintura: idPintura,
@@ -130,6 +137,7 @@ export const usePainterPanel = () => {
         data.file.size,
         data.title,
         data.description,
+        sobres.sobres,
       );
       const nueva = await aArtwork(obra);
       setArtworks((actuales) => [...actuales, nueva]);

@@ -49,6 +49,11 @@ def obtener_llave_actual() -> str:
     return estado_sesion["llave_privada_pem"]
 
 
+def obtener_rol_actual() -> str:
+    """Rol con el que se inyecto la llave ("pintor" o "jurado"), o None si no hay sesion."""
+    return estado_sesion["rol"]
+
+
 def verificar_boveda(payload=None) -> bool:
     """Devuelve True si hay una llave cargada, False si hay amnesia."""
     return {"lista": estado_sesion["llave_privada_pem"] is not None}
