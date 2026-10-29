@@ -39,6 +39,8 @@ export const ENDPOINTS = {
   JURADO: {
     // Llaves publicas RSA de los jueces (para los sobres de llave)
     LLAVES_PUBLICAS: '/api/jurado/llaves-publicas',
+    // Obras que el juez en sesion tiene que evaluar
+    MIS_PINTURAS: '/api/jurado/mis-pinturas',
   },
 
   // Rutas de Chaum / Jurado

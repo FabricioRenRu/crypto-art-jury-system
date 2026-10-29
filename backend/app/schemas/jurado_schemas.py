@@ -14,6 +14,20 @@ class LlavesPublicasJuradoResponse(BaseModel):
     jueces: list[LlavePublicaJuezResponse]
 
 
+class PinturaAsignadaResponse(BaseModel):
+    """Una obra en la cola del juez. No incluye nada del pintor (evaluacion anonima)."""
+    id: uuid.UUID
+    codigo_anonimo: str
+    titulo: str
+    descripcion: str
+    tipo_mime: str
+    evaluada: bool
+
+
+class MisPinturasJuezResponse(BaseModel):
+    pinturas: list[PinturaAsignadaResponse]
+
+
 class PinturaCifradaJuezResponse(BaseModel):
     """Lo que necesita un juez para abrir una obra en su navegador."""
     id_pintura: uuid.UUID

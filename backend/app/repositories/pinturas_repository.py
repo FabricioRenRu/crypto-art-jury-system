@@ -32,6 +32,18 @@ def find_sobre(db: Session, id_pintura: uuid.UUID, id_jurado: uuid.UUID) -> Opti
     )
 
 
+def find_by_juez(db: Session, id_jurado: uuid.UUID) -> list[Pintura]:
+    """Pinturas que tienen un sobre de llave para este juez (las que le toca evaluar)."""
+    return (
+        db.query(Pintura)
+        .join(SobreLlave, SobreLlave.id_pintura == Pintura.id)
+        .options(selectinload(Pintura.evaluaciones))
+        .filter(SobreLlave.id_jurado == id_jurado)
+        .order_by(Pintura.creado_en)
+        .all()
+    )
+
+
 def save_con_sobres(db: Session, pintura: Pintura, sobres: list[SobreLlave]) -> Pintura:
     """Inserta la pintura y todos sus sobres en UNA sola transaccion (todo o nada)."""
     db.add(pintura)

@@ -19,7 +19,7 @@ const DEFAULT_DRAFT: JuryDraft = { stars: 3, comment: '' };
 const SENDING_MS = 900;
 const SAVED_MS = 2500;
 
-export function useJuryEvaluation(queue: JuryArtwork[]) {
+export function useJuryEvaluation(queue: JuryArtwork[], initialRatedIds: string[] = []) {
   /** STATE: posicion de la obra que se esta calificando. */
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -27,7 +27,7 @@ export function useJuryEvaluation(queue: JuryArtwork[]) {
   const [drafts, setDrafts] = useState<Record<string, JuryDraft>>({});
 
   /** STATE: ids de las obras ya calificadas en esta sesion. */
-  const [ratedIds, setRatedIds] = useState<string[]>([]);
+  const [ratedIds, setRatedIds] = useState<string[]>(initialRatedIds);
 
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
 

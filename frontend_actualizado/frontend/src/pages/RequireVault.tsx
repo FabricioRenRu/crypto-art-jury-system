@@ -47,7 +47,7 @@ export default function RequireVault({ children, rol }: { children: React.ReactN
   };
 
   // Sin JWT no hay sesión: al inicio de sesión
-  if (esPintor && !sessionStorage.getItem('access_token')) {
+  if (!sessionStorage.getItem('access_token')) {
     return <Navigate to={PATHS.sesion} replace />;
   }
 

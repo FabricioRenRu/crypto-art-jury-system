@@ -61,6 +61,7 @@ export interface JuryArtwork {
   id: string; // Codigo anonimo, ej. "#PNT-4092"
   title: string;
   imageUrl: string;
+  idPintura?: string; // UUID de la pintura en el backend (para guardar la evaluacion)
 }
 
 /** Una opcion de la hoja de calificacion del jurado (1 a 3 estrellas). */

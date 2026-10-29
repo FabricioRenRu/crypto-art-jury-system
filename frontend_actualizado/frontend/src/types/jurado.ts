@@ -16,6 +16,21 @@ export interface LlavesPublicasJuradoResponse {
   jueces: LlavePublicaJuez[];
 }
 
+/** Una obra en la cola del juez (sin datos del pintor). */
+export interface PinturaAsignada {
+  id: string;
+  codigo_anonimo: string;
+  titulo: string;
+  descripcion: string;
+  tipo_mime: string;
+  evaluada: boolean;
+}
+
+/** GET /api/jurado/mis-pinturas */
+export interface MisPinturasJuezResponse {
+  pinturas: PinturaAsignada[];
+}
+
 /** GET /api/pinturas/{id}/descargar: obra cifrada + sobre RSA-OAEP del juez en sesión. */
 export interface PinturaCifradaJuezResponse {
   id_pintura: string;

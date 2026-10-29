@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session
 
 import app.services.jurado_service as jurado_service
 from app.database.connection import get_db
-from app.schemas.jurado_schemas import LlavesPublicasJuradoResponse
+from app.dependencies.auth_deps import require_juez
+from app.schemas.jurado_schemas import LlavesPublicasJuradoResponse, MisPinturasJuezResponse
 
 router = APIRouter(prefix="/api/jurado", tags=["Jurado"])
 
@@ -16,11 +17,14 @@ def obtener_llaves_jurado(db: Session = Depends(get_db)):
     """
     return jurado_service.obtener_llaves_publicas(db)
 
-@router.get("/mis-pinturas", response_model=None)
-def listar_pinturas_asignadas():
+@router.get("/mis-pinturas", response_model=MisPinturasJuezResponse)
+def listar_pinturas_asignadas(
+    payload: dict = Depends(require_juez),
+    db: Session = Depends(get_db)
+):
     """
-    Explicación: Consulta la lista de pinturas que el juez actual tiene pendientes de evaluar.
-    Espera recibir: Una petición GET. (Depende del token o ID del juez en sesión).
-    Espera devolver: Una lista de objetos con la información básica de las pinturas asignadas.
+    Explicación: Consulta la lista de pinturas que el juez actual tiene que evaluar (las que tienen un sobre para él).
+    Espera recibir: Una petición GET con el JWT del juez.
+    Espera devolver: `pinturas`: id, código anónimo, título, descripción, tipo MIME y si ya la evaluó.
     """
-    pass
+    return jurado_service.listar_pinturas_asignadas(db, payload)

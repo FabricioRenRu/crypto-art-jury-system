@@ -42,7 +42,7 @@ export default function AppRouter() {
         <Route path={PATHS.registroPintor} element={<RegistroPintorPage />} />
         <Route path={PATHS.registroJurado} element={<RegistroJuradoPage />} />
         <Route path={PATHS.panelPintor} element={<RequireVault rol="pintor"><PanelPintorPage /></RequireVault>} />
-        <Route path={PATHS.evaluacionJurado} element={<EvaluacionJuradoPage />} />
+        <Route path={PATHS.evaluacionJurado} element={<RequireVault rol="jurado"><EvaluacionJuradoPage /></RequireVault>} />
         <Route path={PATHS.vistoBuenoPresidente} element={<VistoBuenoPresidentePage />} />
         <Route path={PATHS.resultados} element={<ResultadosPage />} />
       </Route>

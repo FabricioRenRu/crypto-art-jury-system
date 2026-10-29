@@ -4,14 +4,21 @@ Llaves publicas RSA del jurado. El navegador del pintor las baja con
 GET /api/jurado/llaves-publicas para envolver K_AES con RSA-OAEP (un sobre por juez).
 """
 import logging
+import uuid
 from typing import Final
 
 from Crypto.PublicKey import RSA
 from sqlalchemy.orm import Session
 
 import app.repositories.jurado_repository as jurado_repository
+import app.repositories.pinturas_repository as pinturas_repository
 from app.exceptions.custom_exceptions import ConfiguracionJuradoIncompletaException
-from app.schemas.jurado_schemas import LlavePublicaJuezResponse, LlavesPublicasJuradoResponse
+from app.schemas.jurado_schemas import (
+    LlavePublicaJuezResponse,
+    LlavesPublicasJuradoResponse,
+    MisPinturasJuezResponse,
+    PinturaAsignadaResponse,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -60,3 +67,32 @@ def obtener_llaves_publicas(db: Session) -> LlavesPublicasJuradoResponse:
             )
         )
     return LlavesPublicasJuradoResponse(jueces=llaves)
+
+
+def codigo_anonimo(id_pintura: uuid.UUID) -> str:
+    # Codigo corto para mostrar en la mesa de calificacion, sin datos del pintor
+    return "#PNT-" + id_pintura.hex[:8].upper()
+
+
+def listar_pinturas_asignadas(db: Session, payload_token: dict) -> MisPinturasJuezResponse:
+    id_jurado = uuid.UUID(payload_token["sub"])
+    pinturas = pinturas_repository.find_by_juez(db, id_jurado)
+
+    asignadas = []
+    for pintura in pinturas:
+        evaluada = False
+        for evaluacion in pintura.evaluaciones:
+            if evaluacion.id_jurado == id_jurado:
+                evaluada = True
+
+        asignadas.append(
+            PinturaAsignadaResponse(
+                id=pintura.id,
+                codigo_anonimo=codigo_anonimo(pintura.id),
+                titulo=pintura.titulo,
+                descripcion=pintura.descripcion,
+                tipo_mime=pintura.mime_type,
+                evaluada=evaluada,
+            )
+        )
+    return MisPinturasJuezResponse(pinturas=asignadas)
