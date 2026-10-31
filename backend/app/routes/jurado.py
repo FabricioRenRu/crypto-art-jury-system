@@ -28,3 +28,6 @@ def listar_pinturas_asignadas(
     Espera devolver: `pinturas`: id, código anónimo, título, descripción, tipo MIME y si ya la evaluó.
     """
     return jurado_service.listar_pinturas_asignadas(db, payload)
+
+
+

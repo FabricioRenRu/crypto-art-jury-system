@@ -56,11 +56,15 @@ export default function ArtworkRow({ artwork, selected, onToggle }: ArtworkRowPr
       </div>
 
       {/* Puntuación */}
-      <div className="col-span-1 flex items-center justify-start lg:justify-center">
-        <div className="flex items-baseline gap-1 bg-surface-container-lowest px-2.5 py-1 rounded">
-          <span className="font-headline-sm text-headline-sm text-primary">{artwork.score.toFixed(1)}</span>
-          <span className="font-label-sm text-label-sm text-on-surface-variant">/10</span>
-        </div>
+      <div className="flex items-baseline gap-1 bg-surface-container-lowest px-2.5 py-1 rounded">
+        {artwork.score === null ? (
+          <Icon name="visibility_off" className="text-[18px] text-on-surface-variant" />
+        ) : (
+          <>
+            <span className="font-headline-sm text-headline-sm text-primary">{artwork.score.toFixed(1)}</span>
+            <span className="font-label-sm text-label-sm text-on-surface-variant">/10</span>
+          </>
+        )}
       </div>
 
       {/* Estado */}

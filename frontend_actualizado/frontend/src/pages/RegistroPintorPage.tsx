@@ -11,7 +11,6 @@ import { useState, useEffect } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Icon from '../components/ui/Icon';
-import CryptoTestPanel from '../components/dev/CryptoTestPanel';
 import { useRegisterPainter } from '../hooks/useRegisterPainter';
 import { DEFAULT_AVATAR_URL } from '../data/assets';
 import { PATHS } from '../routes/paths';
@@ -351,10 +350,7 @@ export default function RegistroPintorPage() {
             </div>
           </div>
 
-          {/* Prueba del motor criptografico */}
-          <div className="mt-space-xl">
-            <CryptoTestPanel />
-          </div>
+
         </div>
       </div>
     </div>

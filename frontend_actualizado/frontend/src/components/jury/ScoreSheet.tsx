@@ -15,6 +15,8 @@ interface ScoreSheetProps {
   onChangeComment: (comment: string) => void;
   onSave: () => void;
   onNext: () => void;
+  errorMessage?: string | null;
+  isRated?: boolean;
 }
 
 export default function ScoreSheet({
@@ -25,6 +27,8 @@ export default function ScoreSheet({
   onChangeComment,
   onSave,
   onNext,
+  errorMessage,
+  isRated,
 }: ScoreSheetProps) {
   const isSending = saveStatus === 'sending';
   const isSaved = saveStatus === 'saved';
@@ -137,7 +141,7 @@ export default function ScoreSheet({
         <div className="flex flex-col gap-space-sm pt-space-xs">
           <button
             type="submit"
-            disabled={isSending}
+            disabled={isSending || isRated }
             className={`w-full py-3.5 px-space-md font-label-md text-label-md uppercase tracking-wider rounded-lg shadow-lg flex items-center justify-center gap-space-sm transition-all transform active:scale-95 ${
               isSaved
                 ? 'bg-surface-bright text-primary'
@@ -158,11 +162,20 @@ export default function ScoreSheet({
             )}
             {saveStatus === 'idle' && (
               <>
-                <Icon name="check_circle" className="text-[20px]" />
-                Guardar Calificación
+                <Icon name={isRated ? 'lock' : 'check_circle'} className="text-[20px]" />
+                {isRated ? 'Ya calificaste esta obra' : 'Guardar Calificación'}
+              </>
+            )}
+            {saveStatus === 'error' && (
+              <>
+                <Icon name="error" className="text-[20px]" />
+                No se pudo guardar
               </>
             )}
           </button>
+          {errorMessage && (
+            <p className="font-body-sm text-body-sm text-error">{errorMessage}</p>
+          )}
           <button
             type="button"
             onClick={onNext}

@@ -43,10 +43,24 @@ export const ENDPOINTS = {
     MIS_PINTURAS: '/api/jurado/mis-pinturas',
   },
 
+  // Rutas del presidente
+  PRESIDENTE: {
+    //Llave publica RSA del presidente, para la firma ciega
+    LLAVE_PUBLICA: '/api/presidente/llave-publica',
+    LISTAR_VOTOS_PENDIENTES: '/api/presidente/evaluaciones-pendientes',
+    SUBIR_FIRMAS_CIEGAS: '/api/presidente/firmar-evaluaciones'
+
+  },
+
   // Rutas de Chaum / Jurado
   EVALUACIONES: {
-    FIRMAR_CEGADO: '/api/evaluaciones/firmar-cegado',
-    ENVIAR_FINAL: '/api/evaluaciones/enviar',
-    DESCARGAR_SOBRE: (idEvaluacion: string) => `/api/evaluaciones/${idEvaluacion}/sobre`
+    SUBIR_EVALUACION_CEGADA: '/api/evaluaciones/cegadas',
+    MIS_EVALUACIONES: '/api/evaluaciones/mis-evaluaciones',
+    PUBLICAR: '/api/evaluaciones/publicar',
+  },
+
+  RESULTADOS: {
+    TABLERO_PUBLICO: '/api/resultados/tablero-publico',
   }
+
 } as const;

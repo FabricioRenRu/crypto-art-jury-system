@@ -27,11 +27,11 @@ export interface ContestPhase {
 
 /** Una obra en revisión anónima para el visto bueno del presidente. */
 export interface Artwork {
-  id: string; // ID anónimo, ej. "ART-9012"
+  id: string;
   title: string;
   category: string;
-  score: number; // Puntuación sobre 10
-  status: string; // Ej. "Listo para firma"
+  score: number | null; // null = voto cegado (el presidente no conoce la calificación)
+  status: string;
 }
 
 /** Variantes del encabezado: público (Inicio) o competencia (resto de páginas). */

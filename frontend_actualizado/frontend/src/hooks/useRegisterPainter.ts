@@ -7,7 +7,7 @@ import { authService } from '../services/authService';
 import type { PintorCreate, PintorResponse } from '../types/pintor';
 import { descargarArchivoTexto } from '../utils/fileUtils';
 import { useCryptoWorker } from './useCryptoWorker';
-import { Acciones } from '../workers/crypto.worker';
+import { Acciones } from '../workers/crypto.actions';
 
 
 //Lo que la UI nos manda

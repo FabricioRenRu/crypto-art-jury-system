@@ -6,19 +6,54 @@ from app.exceptions.custom_exceptions import EmailYaRegistradoException, Credenc
 from app.utils.security import get_password_hash, verify_password, create_access_token
 from app.models.pintor import Pintor
 from app.models.jurado import Jurado
-from typing import Any
+from typing import Any, Optional
 import os
 import base64
 import uuid
 import logging
 from app.exceptions.custom_exceptions import SeudonimoYaRegistradoException
+from app.exceptions.custom_exceptions import ArchivoInvalidoException, ArchivoDemasiadoGrandeException
+import binascii
 
 logger = logging.getLogger(__name__)
 
 # Carpeta para guardar las fotos de Perfil
 os.makedirs("static/avatars", exist_ok=True)
 
+FORMATOS_FOTO = {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp"}
+MAX_FOTO_BYTES = 2 * 1024 * 1024
 
+
+def _guardar_foto_perfil(data_url: Optional[str]) -> Optional[str]:
+    """Valida y guarda la foto (solo PNG/JPG/WEBP, máx. 2 MB). Regresa la ruta pública o None."""
+    if not data_url:
+        return None
+    cabecera, _, data_b64 = data_url.partition(",")
+    if not (cabecera.startswith("data:") and cabecera.endswith(";base64")):
+        raise ArchivoInvalidoException("La foto de perfil no es válida.")
+    extension = FORMATOS_FOTO.get(cabecera[len("data:"):-len(";base64")])
+    if extension is None:
+        raise ArchivoInvalidoException("La foto debe ser PNG, JPG o WEBP.")
+    if len(data_b64) > MAX_FOTO_BYTES * 4 // 3 + 4:
+        raise ArchivoDemasiadoGrandeException("La foto supera los 2 MB.")
+    try:
+        datos = base64.b64decode(data_b64, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise ArchivoInvalidoException("La foto de perfil no es válida.") from exc
+
+    # Revisa los "números mágicos": que el contenido sea realmente la imagen que dice ser
+    es_valida = (
+        (extension == "png" and datos.startswith(b"\x89PNG\r\n\x1a\n"))
+        or (extension == "jpg" and datos.startswith(b"\xff\xd8\xff"))
+        or (extension == "webp" and datos[:4] == b"RIFF" and datos[8:12] == b"WEBP")
+    )
+    if not es_valida:
+        raise ArchivoInvalidoException("El contenido de la foto no corresponde a su formato.")
+
+    nombre_archivo = f"{uuid.uuid4()}.{extension}"
+    with open(f"static/avatars/{nombre_archivo}", "wb") as archivo:
+        archivo.write(datos)
+    return f"/static/avatars/{nombre_archivo}"
 
 
 def crear_pintor(db: Session, payload: PintorCreate) -> PintorResponse:
@@ -33,25 +68,7 @@ def crear_pintor(db: Session, payload: PintorCreate) -> PintorResponse:
 
     payload.contrasena = hashed_contrasena
 
-    ruta_foto: str = None
-    if payload.foto_perfil_b64 and payload.foto_perfil_b64.startswith("data:image"):
-        # El frontend manda algo como "data:image/png;base64,iVBORw0KGgo..."
-        # Separamos el encabezado de los datos reales
-        cabecera, data_b64 = payload.foto_perfil_b64.split(";base64,")
-        
-        # Extraemos la extensión (png, jpeg, webp)
-        extension: str = cabecera.split("/")[-1] 
-        
-        # Generamos un nombre único y seguro
-        nombre_archivo: str = f"{uuid.uuid4()}.{extension}"
-        ruta_fisica: str = f"static/avatars/{nombre_archivo}"
-        
-        # Decodificamos y guardamos el archivo en el disco duro
-        with open(ruta_fisica, "wb") as archivo_imagen:
-            archivo_imagen.write(base64.b64decode(data_b64))
-            
-        # Guardamos la ruta que irá a la base de datos
-        ruta_foto: str = f"/static/avatars/{nombre_archivo}"
+    ruta_foto: Optional[str] = _guardar_foto_perfil(payload.foto_perfil_b64)
 
     # Guardar en base de datos
     new_pintor: Pintor = pintores_repository.save(

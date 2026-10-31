@@ -2,7 +2,7 @@ from pydantic import BaseModel
 import uuid
 
 
-class LlavePublicaJuezResponse(BaseModel):
+class LlavePublicaResponse(BaseModel):
     """Llave publica RSA de un juez. Solo datos publicos: la privada nunca sale de su .pem."""
     id: uuid.UUID
     nombre: str
@@ -11,7 +11,7 @@ class LlavePublicaJuezResponse(BaseModel):
 
 
 class LlavesPublicasJuradoResponse(BaseModel):
-    jueces: list[LlavePublicaJuezResponse]
+    jueces: list[LlavePublicaResponse]
 
 
 class PinturaAsignadaResponse(BaseModel):
@@ -39,3 +39,6 @@ class PinturaCifradaJuezResponse(BaseModel):
     hash_pintura_cifrada: str
     # CK = RSA-OAEP(PK_juez, K_AES), en base64. Solo se abre con la privada de este juez
     sobre_llave: str
+
+
+

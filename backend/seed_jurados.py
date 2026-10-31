@@ -11,6 +11,7 @@ from app.models.jurado import Jurado, RolJurado
 from app.utils.security import get_password_hash
 from typing import Any
 from sqlalchemy.orm import Session
+from app.utils.crypto import BITS_MINIMOS_LLAVE, bits_llave_publica
 
 BITS_LLAVE_RSA = 2048
 
@@ -37,22 +38,20 @@ def asignar_llaves_rsa(jurado: Jurado):
     jurado.clave_publica_rsa = publica
 
 
-def completar_llaves_jueces(db: Session):
-    """Para una BD ya creada sin llaves RSA (version anterior de este script)."""
-    jueces_sin_llave = (
-        db.query(Jurado)
-        .filter(Jurado.rol == RolJurado.JUEZ, Jurado.clave_publica_rsa.is_(None))
-        .all()
-    )
-    if len(jueces_sin_llave) == 0:
-        print("Los jurados ya están registrados y todos los jueces tienen llave RSA.")
+def completar_llaves(db: Session):
+    """Genera llaves para cualquier miembro del jurado (jueces Y presidente) sin llave válida."""
+    sin_llave = [
+        j for j in db.query(Jurado).all()
+        if not j.clave_publica_rsa or bits_llave_publica(j.clave_publica_rsa) < BITS_MINIMOS_LLAVE
+    ]
+    if not sin_llave:
+        print("Todos los miembros del jurado ya tienen llave RSA válida.")
         return
-
-    for juez in jueces_sin_llave:
-        print(f"Generando llaves RSA para {juez.nombre}")
-        asignar_llaves_rsa(juez)
+    for jurado in sin_llave:
+        print(f"Generando llaves RSA para {jurado.nombre}")
+        asignar_llaves_rsa(jurado)
     db.commit()
-    print(f"Se generaron llaves RSA para {len(jueces_sin_llave)} jueces")
+    print(f"Se generaron llaves RSA para {len(sin_llave)} miembros del jurado")
 
 
 def seed_jurados():
@@ -60,7 +59,7 @@ def seed_jurados():
     try:
         # Verificar si ya existen para no duplicarlos
         if db.query(Jurado).count() > 0:
-            completar_llaves_jueces(db)
+            completar_llaves(db)
             return
 
         print(" Iniciando el Protocolo de Generación de Jurados...\n")
@@ -85,10 +84,9 @@ def seed_jurados():
                 rol=perfil['rol']
             )
 
-            # Solo los jueces reciben sobres; el presidente firma a ciegas
-            if perfil['rol'] == RolJurado.JUEZ:
-                print(f"Generando llaves RSA para {perfil['nombre']}")
-                asignar_llaves_rsa(nuevo_jurado)
+           
+            print(f"Generando llaves RSA para {perfil['nombre']}")
+            asignar_llaves_rsa(nuevo_jurado)
 
             db.add(nuevo_jurado)
             print(f"{perfil['nombre']} insertado en la BD con contraseña: {password_plana}\n")

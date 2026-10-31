@@ -1,30 +1,58 @@
-from fastapi import APIRouter
+"""
+/app/routes/evaluaciones.py
+"""
+import uuid
+
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+
+import app.services.evaluacion_service as evaluacion_service
+from app.database.connection import get_db
+from app.dependencies.auth_deps import require_juez
+from app.schemas.evaluacion_schemas import (
+    HashedEvaluationCreate,
+    HashedEvaluationResponse,
+    MisEvaluacionesResponse,
+    PublicarEvaluacionRequest,
+    PublicarEvaluacionResponse,
+)
 
 router = APIRouter(prefix="/api/evaluaciones", tags=["Evaluaciones"])
 
-@router.post("/cegadas", response_model=None)
-def subir_evaluacion_cegada():
-    """
-    Explicación: Guarda el voto oculto del juez en la base de datos (Estado: ESPERANDO_FIRMA), sin revelar estrellas ni comentarios.
-    Espera recibir: Un JSON con el `id_juez`, `id_pintura` y el `hash_cegado` (h').
-    Espera devolver: Un mensaje de confirmación y el `id_evaluacion` creado.
-    """
-    pass
 
-@router.get("/mi-firma/{id_pintura}", response_model=None)
-def consultar_firma_presidente(id_pintura: int):
+@router.post("/cegadas", response_model=HashedEvaluationResponse, status_code=201)
+def subir_evaluacion_cegada(
+    request_payload: HashedEvaluationCreate,
+    user_payload: dict = Depends(require_juez),
+    db: Session = Depends(get_db),
+):
     """
-    Explicación: Endpoint de polling para que el juez pregunte si el presidente ya autorizó su evaluación cegada.
-    Espera recibir: El `id_pintura` en la URL y la identificación del juez.
-    Espera devolver: La `firma_ciega_presi` (s') si el estado es FIRMADO, o un mensaje de "Aún pendiente" en caso contrario.
+    Guarda h' y la evaluación cifrada del juez (estado ESPERANDO_FIRMA).
+    El servidor no puede leer estrellas ni comentarios.
     """
-    pass
+    return evaluacion_service.guardar_hash_evaluaciones(db, request_payload, uuid.UUID(user_payload["sub"]))
 
-@router.post("/publicar", response_model=None)
-def publicar_evaluacion():
+
+@router.get("/mis-evaluaciones", response_model=MisEvaluacionesResponse)
+def mis_evaluaciones(
+    user_payload: dict = Depends(require_juez),
+    db: Session = Depends(get_db),
+):
     """
-    Explicación: Recibe el voto final en texto claro y la firma descegada del presidente. Cambia el estado a PUBLICADO.
-    Espera recibir: Un JSON con el `id_evaluacion` (o pintura/juez), el texto claro (`estrellas`, `comentarios`), el `hash_original`, la `firma_del_juez` y la `firma_descegada` (s).
-    Espera devolver: Una confirmación de que el voto fue integrado exitosamente al tablero final.
+    Evaluaciones del juez con su estado; las FIRMADO traen s' y la evaluación cifrada
+    para que el navegador del juez la descegue y la publique.
     """
-    pass
+    return evaluacion_service.listar_mis_evaluaciones(db, uuid.UUID(user_payload["sub"]))
+
+
+@router.post("/publicar", response_model=PublicarEvaluacionResponse)
+def publicar_evaluacion(
+    request_payload: PublicarEvaluacionRequest,
+    user_payload: dict = Depends(require_juez),
+    db: Session = Depends(get_db),
+):
+    """
+    Recibe la evaluación en claro, s (firma descegada del presidente) y la firma RSA-PSS
+    del juez. Verifica ambas firmas y cambia el estado a PUBLICADO.
+    """
+    return evaluacion_service.publicar_evaluacion(db, request_payload, uuid.UUID(user_payload["sub"]))

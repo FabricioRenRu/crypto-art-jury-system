@@ -6,7 +6,7 @@
  */
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Status, Acciones } from '../workers/crypto.worker'; 
+import { Status, Acciones } from '../workers/crypto.actions'; 
 
 
 interface CryptoContextType {
@@ -61,7 +61,7 @@ export function CryptoProvider({ children }: { children: ReactNode }) {
 
     workerRef.current = worker;
     // Mandamos el mensaje silencioso con un id predefinido
-    worker.postMessage({ id: "arranque", accion: Acciones.PROBARCONEXION });
+    worker.postMessage({ id: "arranque", accion: Acciones.PROBAR_CONEXION });
 
     return () => worker.terminate();
   }, []);

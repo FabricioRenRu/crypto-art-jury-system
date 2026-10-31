@@ -10,7 +10,7 @@ import { DEFAULT_AVATAR_URL } from '../data/assets';
 import { painterService } from '../services/painterService';
 import { juradoService } from '../services/juradoService';
 import { useCryptoWorker } from './useCryptoWorker';
-import { Acciones } from '../workers/crypto.worker';
+import { Acciones } from '../workers/crypto.actions';
 import type { PainterArtwork, PainterProfile } from '../types';
 import type { PinturaResponse } from '../types/pintor';
 import type { UploadArtworkData } from '../components/painter/UploadArtworkModal';

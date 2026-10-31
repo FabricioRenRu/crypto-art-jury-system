@@ -49,5 +49,8 @@ export function useArtworkSelection(artworks: Artwork[]) {
   /** Indica si una obra concreta está seleccionada. */
   const isSelected = useCallback((id: string) => selectedIds.has(id), [selectedIds]);
 
-  return { selectedIds, selectedCount, allSelected, toggleOne, toggleAll, isSelected };
+   const clear = useCallback(() => setSelectedIds(new Set()), []);
+
+  return { selectedIds, selectedCount, allSelected, toggleOne, toggleAll, isSelected, clear };
+
 }

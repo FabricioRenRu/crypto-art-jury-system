@@ -7,35 +7,24 @@ import logging
 import uuid
 from typing import Final
 
-from Crypto.PublicKey import RSA
+
 from sqlalchemy.orm import Session
 
 import app.repositories.jurado_repository as jurado_repository
 import app.repositories.pinturas_repository as pinturas_repository
 from app.exceptions.custom_exceptions import ConfiguracionJuradoIncompletaException
 from app.schemas.jurado_schemas import (
-    LlavePublicaJuezResponse,
+    LlavePublicaResponse,
     LlavesPublicasJuradoResponse,
     MisPinturasJuezResponse,
     PinturaAsignadaResponse,
 )
+from app.utils.crypto import BITS_MINIMOS_LLAVE, bits_llave_publica
 
 logger = logging.getLogger(__name__)
 
 NUM_JUECES: Final[int] = 3
-BITS_MINIMOS_LLAVE: Final[int] = 2048
 
-
-def bits_llave_publica(llave_publica_pem: str) -> int:
-    """Tamano del modulo n en bits, o 0 si el PEM no es una llave publica RSA valida."""
-    try:
-        llave = RSA.import_key(llave_publica_pem)
-    except (ValueError, IndexError, TypeError):
-        return 0
-    if llave.has_private():
-        # Nunca se publica una llave privada por error
-        return 0
-    return llave.size_in_bits()
 
 
 def obtener_llaves_publicas(db: Session) -> LlavesPublicasJuradoResponse:
@@ -59,7 +48,7 @@ def obtener_llaves_publicas(db: Session) -> LlavesPublicasJuradoResponse:
             )
 
         llaves.append(
-            LlavePublicaJuezResponse(
+            LlavePublicaResponse(
                 id=juez.id,
                 nombre=juez.nombre,
                 clave_publica_rsa=juez.clave_publica_rsa,

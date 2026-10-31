@@ -1,110 +1,97 @@
 /**
  * workers/crypto.worker.ts
- * Este archivo va a ser un hilo de procesamiento independiente
- * (Web Worker) que ejecuta un entorno de Linux virtual con python y C compilado
- * a WebAssembly (WASM), todo dentro de la memoria RAM del navegador del usuario.
+ * Hilo independiente (Web Worker) que ejecuta Python (Pyodide/WASM) en la RAM del navegador.
+ * Toda la criptografía del cliente corre aquí; React solo le manda mensajes.
  */
-
-// Importamos directamente el modulo ES6 desde el CDN estable
 // @ts-ignore
 import { loadPyodide } from "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.mjs";
+import { Acciones, Status } from './crypto.actions';
 
-export const Acciones = {
-  PROBARCONEXION: "PROBAR_CONEXION",
-  GENERAR_RSA: "GENERAR_RSA",
-  GENERAR_AES: "GENERAR_AES",
-  CIFRAR_PINTURA: "CIFRAR_PINTURA",
-  DESCIFRAR_PINTURA: "DESCIFRAR_PINTURA",
-  VERIFICAR_LLAVE_AES: "VERIFICAR_LLAVE_AES",
-  GENERAR_SOBRES: "GENERAR_SOBRES",
-  ABRIR_SOBRE: "ABRIR_SOBRE",
-  FIRMAR_CONSENTIMIENTO: "FIRMAR_CONSENTIMIENTO",
-  GENERAR_ECDSA: "GENERAR_ECDSA",
-  INYECCION_LLAVE_PRIVADA: "INYECCION_LLAVE_PRIVADA",
-  FIRMAR_MENSAJE_ECDSA: "FIRMAR_MENSAJE_ECDSA",
-  VERIFICAR_BOVEDA: "VERIFICAR_BOVEDA"
-} as const;
+const MAPA_FUNCIONES: Record<string, string> = {
+  [Acciones.PROBAR_CONEXION]: 'probar_conexion',
+  [Acciones.GENERAR_RSA]: 'generar_rsa',
+  [Acciones.GENERAR_AES]: 'generar_aes',
+  [Acciones.CIFRAR_PINTURA]: 'cifrar_pintura',
+  [Acciones.DESCIFRAR_PINTURA]: 'descifrar_pintura',
+  [Acciones.VERIFICAR_LLAVE_AES]: 'verificar_llave_aes',
+  [Acciones.GENERAR_SOBRES]: 'generar_sobres',
+  [Acciones.ABRIR_SOBRE]: 'abrir_sobre',
+  [Acciones.FIRMAR_CONSENTIMIENTO]: 'firmar_consentimiento',
+  [Acciones.GENERAR_ECDSA]: 'generar_ecdsa_keys',
+  [Acciones.INYECCION_LLAVE_PRIVADA]: 'inyectar_llave_privada',
+  [Acciones.FIRMAR_MENSAJE_ECDSA]: 'firmar_mensaje',
+  [Acciones.VERIFICAR_BOVEDA]: 'verificar_boveda',
+  [Acciones.INYECCION_LLAVE_PRESIDENTE]: 'inyectar_llave_presidente',
+  [Acciones.CEGAR_EVALUACION]: 'preparar_evaluacion_cegada',
+  [Acciones.FIRMA_CIEGA]: 'blind_signature',
+  [Acciones.PREPARAR_PUBLICACION]: 'preparar_publicacion',
+  [Acciones.VERIFICAR_EVALUACION_PUBLICA]: 'verificar_evaluacion_publica'
+};
 
-export const Status = {
-  EXITO: "EXITO",
-  ERROR: "ERROR",
-} as const;
+/** Módulos que se copian al sistema de archivos virtual de Pyodide antes de correr main.py */
+const MODULOS_PYTHON = [
+  'rsa_utils', 'aes_utils', 'ecdsa_utils', 'session_utils', 'sobre_llave_utils', 'blind_signature_utils',
+];
 
 let pyodide: any = null;
 
-// Inicialización de Python
-async function init() {
-  // loadPyodide descarga pyodide.asm.wasm
-  pyodide = await loadPyodide({ 
-    indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/" 
-  });
-  //cargamos la libreria
-  await pyodide.loadPackage('pycryptodome');
-  
-  // Para utilizar modulos de Python, hacemos peticiones HTTP a nuestro servidor
-  // Obtenemos el codigo fuente como texto
-  const rsaCode = await (await fetch('/python/rsa_utils.py')).text();
-  const aesCode = await (await fetch('/python/aes_utils.py')).text();
-  const ecdsaCode = await (await fetch('/python/ecdsa_utils.py')).text();
-  const sessionCode = await (await fetch('/python/session_utils.py')).text();
-  const sobreCode = await (await fetch('/python/sobre_llave_utils.py')).text();
-  
-  //pyodide.FS.writeFile() escrive el texto/codigo fuente para escribir ese
-  //texto en el Sistema de archivos virtual en Memoria (VFS) de Pyodide
-  pyodide.FS.writeFile('rsa_utils.py', rsaCode);
-  pyodide.FS.writeFile('aes_utils.py', aesCode);
-  pyodide.FS.writeFile('ecdsa_utils.py', ecdsaCode);
-  pyodide.FS.writeFile('session_utils.py', sessionCode);
-  pyodide.FS.writeFile('sobre_llave_utils.py', sobreCode);
-
-  // Ejecutamos el main
-  const mainCode = await (await fetch('/python/main.py')).text();
-  pyodide.runPython(mainCode);
+async function descargarTexto(ruta: string): Promise<string> {
+  const respuesta = await fetch(ruta);
+  if (!respuesta.ok) throw new Error(`No se pudo cargar ${ruta} (HTTP ${respuesta.status})`);
+  return respuesta.text();
 }
 
-// Promesa global de arranque 
+async function init() {
+  pyodide = await loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/" });
+  await pyodide.loadPackage('pycryptodome');
+
+  for (const modulo of MODULOS_PYTHON) {
+    pyodide.FS.writeFile(`${modulo}.py`, await descargarTexto(`/python/${modulo}.py`));
+  }
+  pyodide.runPython(await descargarTexto('/python/main.py'));
+
+  // Falla al arrancar (y no a media operación) si main.py no expone alguna función del mapa
+  const faltantes = Object.values(MAPA_FUNCIONES).filter((fn) => !pyodide.globals.has(fn));
+  if (faltantes.length > 0) {
+    throw new Error(`main.py no importa: ${faltantes.join(', ')}`);
+  }
+}
+
 const ready = init();
 
-//Codigo para recibir datos de React
+/** Los errores de Python traen todo el traceback; nos quedamos con la última línea legible. */
+function mensajeDeError(error: unknown): string {
+  const texto = String((error as any)?.message ?? error).trim();
+  const ultimaLinea = texto.split('\n').pop() ?? texto;
+  return ultimaLinea.replace(/^\w+(Error|Exception): /, '');
+}
+
 self.onmessage = async (e: MessageEvent) => {
+  const { id, accion, payload } = e.data ?? {};
+  let fnPython: any = null;
+  let payloadPython: any = null;
+  let resultPython: any = null;
+
   try {
     await ready;
-    // id para saber a que promesa de React responderle
-    const { id, accion, payload } = e.data;
+    const fnName = MAPA_FUNCIONES[accion];
+    if (!fnName) throw new Error(`Acción desconocida: ${accion}`);
 
-    let fnName = "";
-    if (accion === Acciones.PROBARCONEXION) fnName = 'probar_conexion';
-    else if (accion === Acciones.GENERAR_RSA) fnName = 'generar_rsa';
-    else if (accion === Acciones.GENERAR_AES) fnName = 'generar_aes';
-    else if (accion === Acciones.CIFRAR_PINTURA) fnName = 'cifrar_pintura';
-    else if (accion === Acciones.DESCIFRAR_PINTURA) fnName = 'descifrar_pintura';
-    else if (accion === Acciones.VERIFICAR_LLAVE_AES) fnName = 'verificar_llave_aes';
-    else if (accion === Acciones.GENERAR_SOBRES) fnName = 'generar_sobres';
-    else if (accion === Acciones.ABRIR_SOBRE) fnName = 'abrir_sobre';
-    else if (accion === Acciones.FIRMAR_CONSENTIMIENTO) fnName = 'firmar_consentimiento';
-    else if (accion === Acciones.GENERAR_ECDSA) fnName = 'generar_ecdsa_keys';
-    else if (accion === Acciones.INYECCION_LLAVE_PRIVADA) fnName = 'inyectar_llave_privada';
-    else if (accion === Acciones.FIRMAR_MENSAJE_ECDSA) fnName = 'firmar_mensaje';
-    else if (accion === Acciones.VERIFICAR_BOVEDA) fnName = 'verificar_boveda';
+    fnPython = pyodide.globals.get(fnName);
+    payloadPython = pyodide.toPy(payload ?? {});
+    resultPython = fnPython(payloadPython);
 
-    if (fnName) {
-      //obtenemos la funcion de pyodide
-      const fnPython = pyodide.globals.get(fnName);
-      const payloadPython = pyodide.toPy(payload || {});
-      let resultPython: any;
-      try {
-        //ejecutamos la funcion
-        resultPython = fnPython(payloadPython);
-        //el resultado de la funcion lo convertimos en un formato que typescript entienda
-        const resultJS = resultPython.toJs({ dict_converter: Object.fromEntries });
-        self.postMessage({ id, status: Status.EXITO, data: resultJS });
-      } finally {
-        resultPython?.destroy?.();
-        payloadPython.destroy();
-        fnPython.destroy();
-      }
-    }
-  } catch (error: any) {
-    self.postMessage({ id: e.data.id, status: Status.ERROR, error: error.message });
+    // Si Python regresa un valor simple (str, bool) no es un proxy y no tiene toJs
+    const data = resultPython?.toJs
+      ? resultPython.toJs({ dict_converter: Object.fromEntries })
+      : resultPython;
+    self.postMessage({ id, status: Status.EXITO, data });
+  } catch (error) {
+    self.postMessage({ id, status: Status.ERROR, error: mensajeDeError(error) });
+  } finally {
+    // Liberamos memoria de Pyodide; el ?. evita que un error aquí tape el error real
+    resultPython?.destroy?.();
+    payloadPython?.destroy?.();
+    fnPython?.destroy?.();
   }
 };

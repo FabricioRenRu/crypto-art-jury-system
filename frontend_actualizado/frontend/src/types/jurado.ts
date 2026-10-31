@@ -4,7 +4,7 @@
  */
 
 /** Llave pública RSA de un juez (PEM). La privada nunca sale de su archivo .pem. */
-export interface LlavePublicaJuez {
+export interface LlavePublicaResponse {
   id: string;
   nombre: string;
   clave_publica_rsa: string;
@@ -13,7 +13,7 @@ export interface LlavePublicaJuez {
 
 /** GET /api/jurado/llaves-publicas */
 export interface LlavesPublicasJuradoResponse {
-  jueces: LlavePublicaJuez[];
+  jueces: LlavePublicaResponse[];
 }
 
 /** Una obra en la cola del juez (sin datos del pintor). */
@@ -44,3 +44,6 @@ export interface PinturaCifradaJuezResponse {
 
 /** Sobres armados en el worker: { id_juez: sobre_base64 }. */
 export type SobresJurado = Record<string, string>;
+
+
+

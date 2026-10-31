@@ -6,8 +6,14 @@ from aes_utils import (
     verificar_llave_aes,
 )
 from ecdsa_utils import firmar_consentimiento, generar_ecdsa_keys, firmar_mensaje
-from session_utils import inyectar_llave_privada, verificar_boveda
+from session_utils import inyectar_llave_privada, verificar_boveda, inyectar_llave_presidente
 from sobre_llave_utils import generar_sobres, abrir_sobre
+from blind_signature_utils import (
+    preparar_evaluacion_cegada,
+    blind_signature,
+    preparar_publicacion,
+    verificar_evaluacion_publica,
+)
 
 def probar_conexion(payload):
     return { "mensaje": "¡Conexión exitosa al main.py!" }

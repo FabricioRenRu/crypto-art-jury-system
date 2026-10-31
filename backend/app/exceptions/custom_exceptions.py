@@ -63,3 +63,22 @@ class ConfiguracionJuradoIncompletaException(AppException):
 class SeudonimoYaRegistradoException(AppException):
     status_code = 409
     code = "SEUDONIMO_DUPLICADO"
+
+
+class EvaluacionYaExistenteException(AppException):
+    status_code = 409
+    code = "EVALUACION_YA_EXISTE"
+
+
+class EvaluacionNoFirmableException(AppException):
+    status_code = 409
+    code = "EVALUACION_NO_FIRMABLE"
+
+
+class FirmaInvalidaException(AppException):
+    status_code = 422
+    code = "FIRMA_INVALIDA"
+
+
+
+

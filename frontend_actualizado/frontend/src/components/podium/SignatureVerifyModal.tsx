@@ -1,79 +1,102 @@
 /**
  * components/podium/SignatureVerifyModal.tsx
- * Modal de verificacion de la firma ciega del presidente: elegir obra,
- * copiar la llave publica y comprobar la firma (simulado por ahora).
- *
- * Al cerrarse se reinicia el resultado de la verificacion.
+ * Zona de Verificación Pública (paso 10). El usuario elige una evaluación publicada y el worker
+ * comprueba, sin ninguna llave privada:
+ *   - firma ciega del presidente: s^e mod n == FDH-SHA256(evaluación)
+ *   - firma RSA-PSS del juez sobre la misma evaluación
+ * Al cerrarse se reinicia el resultado.
  */
 import { useState } from 'react';
 import Icon from '../ui/Icon';
-import type { Finalist } from '../../types';
+import { useCryptoWorker } from '../../hooks/useCryptoWorker';
+import { Acciones } from '../../workers/crypto.actions';
+import type { EvaluacionPublica, ObraPublica, ResultadoVerificacion } from '../../types/evaluacion';
 
 interface SignatureVerifyModalProps {
   isOpen: boolean;
-  finalists: Finalist[];
-  publicKey: string;
-  hash: string;
-  scheme: string;
+  obras: ObraPublica[];
+  llavePresidente: string;
   onClose: () => void;
 }
 
-/** Texto de puesto para las opciones del selector: 1er, 2º, 3er, 4º... */
-function positionLabel(position: number): string {
-  if (position === 1 || position === 3) {
-    return `${position}er Puesto`;
-  }
-  return `${position}º Puesto`;
+/** Recorta números/firmas largos para mostrarlos. */
+function recortar(valor: string, largo = 48): string {
+  return valor.length > largo * 2 ? `${valor.slice(0, largo)}…${valor.slice(-largo)}` : valor;
 }
 
-export default function SignatureVerifyModal({
-  isOpen,
-  finalists,
-  publicKey,
-  hash,
-  scheme,
-  onClose,
-}: SignatureVerifyModalProps) {
-  /** STATE: obra elegida para auditar. */
-  const [selectedId, setSelectedId] = useState(finalists[0]?.id ?? '');
+function Check({ ok, texto }: { ok: boolean; texto: string }) {
+  return (
+    <div className={`flex items-center gap-2 font-body-md text-body-md ${ok ? 'text-primary' : 'text-error'}`}>
+      <Icon name={ok ? 'check_circle' : 'cancel'} filled className="text-[20px]" />
+      <span>{texto}</span>
+    </div>
+  );
+}
 
-  /** STATE: true cuando ya se pulso "Verificar Firma Ciega". */
-  const [isVerified, setIsVerified] = useState(false);
+export default function SignatureVerifyModal({ isOpen, obras, llavePresidente, onClose }: SignatureVerifyModalProps) {
+  const { estaListo, ejecutarAccion } = useCryptoWorker();
 
-  /** STATE: true unos segundos despues de copiar la llave. */
-  const [isCopied, setIsCopied] = useState(false);
+  // Lista plana de evaluaciones con la obra a la que pertenecen
+  const opciones = obras.flatMap((obra) => obra.evaluaciones.map((evaluacion) => ({ obra, evaluacion })));
 
-  if (!isOpen) {
-    return null;
-  }
+  /** STATE: id de la evaluación elegida para auditar. */
+  const [selectedId, setSelectedId] = useState('');
+  /** STATE: resultado de la última verificación (null = aún no se verifica). */
+  const [resultado, setResultado] = useState<ResultadoVerificacion | null>(null);
+  /** STATE: true mientras el worker verifica. */
+  const [isVerifying, setIsVerifying] = useState(false);
+  /** STATE: error del worker. */
+  const [error, setError] = useState<string | null>(null);
+
+  if (!isOpen) return null;
+
+  const elegida = opciones.find((o) => o.evaluacion.id_evaluacion === selectedId) ?? opciones[0];
 
   const handleClose = () => {
-    setIsVerified(false);
-    setIsCopied(false);
+    setResultado(null);
+    setError(null);
     onClose();
   };
 
-  const handleCopy = async () => {
+  const verificar = async (evaluacion: EvaluacionPublica, idPintura: string) => {
+    setIsVerifying(true);
+    setError(null);
+    setResultado(null);
     try {
-      await navigator.clipboard.writeText(publicKey);
-      setIsCopied(true);
-      window.setTimeout(() => setIsCopied(false), 2000);
-    } catch (error) {
-      console.error('No se pudo copiar la llave:', error);
+      const res: ResultadoVerificacion = await ejecutarAccion(Acciones.VERIFICAR_EVALUACION_PUBLICA, {
+        id_pintura: idPintura,
+        id_juez: evaluacion.id_juez,
+        estrellas: evaluacion.estrellas,
+        comentario: evaluacion.comentario,
+        texto_canonico: evaluacion.texto_canonico,
+        firma_descegada: evaluacion.firma_descegada,
+        firma_juez: evaluacion.firma_juez,
+        clave_publica_juez: evaluacion.clave_publica_juez,
+        clave_publica_presidente: llavePresidente,
+      });
+      setResultado(res);
+    } catch (err: any) {
+      setError(err.message || 'No se pudo verificar.');
+    } finally {
+      setIsVerifying(false);
     }
   };
 
+  const todoValido =
+    resultado &&
+    resultado.texto_coincide &&
+    resultado.firma_presidente_valida &&
+    resultado.firma_juez_valida &&
+    resultado.hash_recalculado === elegida?.evaluacion.hash_original;
+
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
-      onClick={handleClose}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4" onClick={handleClose}>
       <div
-        className="bg-surface-container-highest max-w-2xl w-full rounded-xl shadow-2xl p-6 relative border border-outline-variant/30"
+        className="bg-surface-container-highest max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-xl shadow-2xl p-6 relative border border-outline-variant/30"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label="Verificacion de firma ciega"
+        aria-label="Verificación de firmas"
       >
         <button
           type="button"
@@ -86,92 +109,81 @@ export default function SignatureVerifyModal({
 
         <div className="flex items-center gap-2 text-primary font-label-sm text-label-sm uppercase tracking-wider mb-2">
           <Icon name="verified_user" filled className="text-[18px]" />
-          <span>Protocolo Criptográfico Zero-Knowledge</span>
+          <span>Zona de Verificación Pública</span>
         </div>
-        <h3 className="font-headline-md text-headline-md text-on-surface">
-          Verificación de Firma a Ciegas del Presidente
-        </h3>
+        <h3 className="font-headline-md text-headline-md text-on-surface">Verificar Firma Ciega y Firma del Juez</h3>
         <p className="font-body-md text-body-md text-secondary mb-6">
-          Comprobación criptográfica de validación sin revelación previa. El presidente ratificó los
-          baremos de forma ciega y anónima antes de conocer las identidades de las obras.
+          La verificación corre en tu navegador con las llaves públicas: no necesitas confiar en el servidor.
         </p>
 
-        <div className="flex flex-col gap-4 mb-6">
-          {/* Selector de obra */}
-          <div className="bg-surface-container p-4 rounded-lg flex flex-col gap-2">
-            <label
-              htmlFor="obra-auditoria"
-              className="font-label-sm text-label-sm uppercase text-secondary font-medium"
-            >
-              Seleccionar Obra para Auditoría
-            </label>
-            <select
-              id="obra-auditoria"
-              value={selectedId}
-              onChange={(e) => {
-                setSelectedId(e.target.value);
-                setIsVerified(false);
-              }}
-              className="w-full bg-surface-variant text-on-surface rounded p-2.5 font-body-md text-body-md border border-outline-variant/30 focus:outline-none focus:ring-1 focus:ring-primary-container"
-            >
-              {finalists.map((finalista) => (
-                <option key={finalista.id} value={finalista.id}>
-                  [{finalista.id}] {finalista.title} ({positionLabel(finalista.position)})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Llave publica */}
-          <div className="bg-surface-container p-4 rounded-lg flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <span className="font-label-sm text-label-sm uppercase text-secondary font-medium">
-                Llave Pública del Presidente
-              </span>
-              <button
-                type="button"
-                onClick={handleCopy}
-                className="text-primary hover:text-on-surface font-label-sm text-label-sm flex items-center gap-1"
+        {opciones.length === 0 || !elegida ? (
+          <p className="font-body-md text-body-md text-on-surface-variant">Aún no hay evaluaciones publicadas.</p>
+        ) : (
+          <div className="flex flex-col gap-4 mb-6">
+            {/* Selector */}
+            <div className="bg-surface-container p-4 rounded-lg flex flex-col gap-2">
+              <label htmlFor="evaluacion-auditoria" className="font-label-sm text-label-sm uppercase text-secondary font-medium">
+                Evaluación a auditar
+              </label>
+              <select
+                id="evaluacion-auditoria"
+                value={elegida.evaluacion.id_evaluacion}
+                onChange={(e) => {
+                  setSelectedId(e.target.value);
+                  setResultado(null);
+                  setError(null);
+                }}
+                className="w-full bg-surface-variant text-on-surface rounded p-2.5 font-body-md text-body-md border border-outline-variant/30 focus:outline-none focus:ring-1 focus:ring-primary-container"
               >
-                <Icon name={isCopied ? 'check' : 'content_copy'} className="text-[14px]" />
-                {isCopied ? 'Copiada' : 'Copiar'}
-              </button>
+                {opciones.map(({ obra, evaluacion }) => (
+                  <option key={evaluacion.id_evaluacion} value={evaluacion.id_evaluacion}>
+                    [{obra.codigo_anonimo}] {obra.titulo} — {evaluacion.juez} ({evaluacion.estrellas}★)
+                  </option>
+                ))}
+              </select>
             </div>
-            <input
-              type="text"
-              readOnly
-              value={publicKey}
-              className="w-full bg-surface-variant text-on-surface font-label-md text-label-md rounded p-2.5 border border-outline-variant/30 focus:outline-none focus:ring-1 focus:ring-primary-container"
-            />
-          </div>
 
-          {/* Hash */}
-          <div className="p-4 rounded-lg bg-surface-container-low border border-primary/20 flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <span className="font-label-sm text-label-sm uppercase text-secondary">
-                Hash de Ratificación Ciega (ECDSA-SHA256)
-              </span>
-              <span className="font-label-sm text-label-sm text-primary font-bold">{scheme}</span>
-            </div>
-            <p className="font-label-sm text-label-sm text-on-surface-variant font-mono break-all">{hash}</p>
-          </div>
-
-          {/* Resultado */}
-          {isVerified && (
-            <div className="p-4 rounded-lg bg-primary-container/15 border border-primary-container text-on-surface flex items-center gap-3">
-              <Icon name="check_circle" filled className="text-[24px] text-primary-container" />
+            {/* Datos públicos */}
+            <div className="p-4 rounded-lg bg-surface-container-low border border-primary/20 flex flex-col gap-3">
               <div>
-                <div className="font-title-md text-title-md font-bold text-primary">
-                  Firma Ciega Válida y Auténtica, Hash Verificado
-                </div>
-                <div className="font-body-sm text-body-sm text-secondary">
-                  Certificado emitido sin descifrado previo de metadata artística. Conforme a las
-                  normas del certamen.
-                </div>
+                <span className="font-label-sm text-label-sm uppercase text-secondary">Texto firmado (canónico)</span>
+                <p className="font-label-sm text-label-sm text-on-surface-variant font-mono break-all mt-1">
+                  {elegida.evaluacion.texto_canonico}
+                </p>
+              </div>
+              <div>
+                <span className="font-label-sm text-label-sm uppercase text-secondary">h = FDH-SHA256(texto)</span>
+                <p className="font-label-sm text-label-sm text-on-surface-variant font-mono break-all mt-1">
+                  {recortar(elegida.evaluacion.hash_original)}
+                </p>
+              </div>
+              <div>
+                <span className="font-label-sm text-label-sm uppercase text-secondary">s (firma descegada del presidente)</span>
+                <p className="font-label-sm text-label-sm text-on-surface-variant font-mono break-all mt-1">
+                  {recortar(elegida.evaluacion.firma_descegada)}
+                </p>
               </div>
             </div>
-          )}
-        </div>
+
+            {/* Resultado */}
+            {resultado && (
+              <div
+                className={`p-4 rounded-lg border flex flex-col gap-2 ${
+                  todoValido ? 'bg-primary-container/15 border-primary-container' : 'bg-error-container/30 border-error'
+                }`}
+              >
+                <Check ok={resultado.texto_coincide} texto="El texto publicado coincide con estrellas y comentario" />
+                <Check
+                  ok={resultado.hash_recalculado === elegida.evaluacion.hash_original}
+                  texto="El hash recalculado coincide con el publicado"
+                />
+                <Check ok={resultado.firma_presidente_valida} texto="Firma ciega del presidente válida (s^e mod n = h)" />
+                <Check ok={resultado.firma_juez_valida} texto={`Firma RSA-PSS de ${elegida.evaluacion.juez} válida`} />
+              </div>
+            )}
+            {error && <p className="font-body-sm text-body-sm text-error">{error}</p>}
+          </div>
+        )}
 
         <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-2">
           <button
@@ -183,11 +195,12 @@ export default function SignatureVerifyModal({
           </button>
           <button
             type="button"
-            onClick={() => setIsVerified(true)}
-            className="w-full sm:w-auto px-6 py-2.5 rounded bg-primary-container hover:bg-tertiary-container text-on-primary font-label-md text-label-md uppercase tracking-wider font-bold flex items-center justify-center gap-2 shadow-[0_0_16px_rgba(255,107,0,0.35)] transition-all"
+            disabled={!elegida || !estaListo || isVerifying}
+            onClick={() => elegida && verificar(elegida.evaluacion, elegida.obra.id_pintura)}
+            className="w-full sm:w-auto px-6 py-2.5 rounded bg-primary-container hover:bg-tertiary-container text-on-primary font-label-md text-label-md uppercase tracking-wider font-bold flex items-center justify-center gap-2 shadow-[0_0_16px_rgba(255,107,0,0.35)] transition-all disabled:opacity-40"
           >
-            <Icon name="key" filled className="text-[18px]" />
-            <span>Verificar Firma Ciega</span>
+            <Icon name={isVerifying ? 'sync' : 'key'} filled className={`text-[18px] ${isVerifying ? 'animate-spin' : ''}`} />
+            <span>{!estaListo ? 'Cargando motor criptográfico...' : 'Verificar Firmas'}</span>
           </button>
         </div>
       </div>

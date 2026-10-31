@@ -54,6 +54,13 @@ def save_con_sobres(db: Session, pintura: Pintura, sobres: list[SobreLlave]) -> 
     db.refresh(pintura)
     return pintura
 
+def exists_by_id(db: Session, id_pintura: uuid.UUID) -> bool:
+    """
+    Verifica si la pintura existe o no en la db
+    """
+    pintura = db.query(Pintura).filter(Pintura.id == id_pintura).first()
+    return pintura is not None
+
 
 def save(db: Session, pintura: Pintura) -> Pintura:
     """Inserta una pintura y confirma la transacción."""

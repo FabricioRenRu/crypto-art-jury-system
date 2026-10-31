@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { juradoService } from '../services/juradoService';
 import { useCryptoWorker } from './useCryptoWorker';
-import { Acciones } from '../workers/crypto.worker';
+import { Acciones } from '../workers/crypto.actions';
 import type { JuryArtwork } from '../types';
 import type { PinturaAsignada } from '../types/jurado';
 
@@ -61,9 +61,21 @@ export const useJuryQueue = () => {
   }, [ejecutarAccion]);
 
   const cargar = useCallback(async () => {
+
     setIsLoading(true);
     setError(null);
+
     try {
+      
+      //Obtenemos la llave publica del Presidente
+      const publicKeyPresident = await juradoService.obtenerLlavePresidente();
+
+      //La inyectamos en la RAM del worker
+      await ejecutarAccion(Acciones.INYECCION_LLAVE_PRESIDENTE, {
+         pem: publicKeyPresident.clave_publica_rsa
+      })
+      
+
       const { pinturas } = await juradoService.listarMisPinturas();
       // Una por una para no saturar la memoria del worker con varias imágenes a la vez
       const obras: JuryArtwork[] = [];

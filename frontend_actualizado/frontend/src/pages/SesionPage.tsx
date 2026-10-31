@@ -13,7 +13,8 @@ import Icon from '../components/ui/Icon';
 import { PATHS } from '../routes/paths';
 import { useLogin, type RolLogin } from '../hooks/useLogin';
 import { useCryptoWorker } from '../hooks/useCryptoWorker';
-import { Acciones } from '../workers/crypto.worker'
+import { Acciones } from '../workers/crypto.actions'
+import { obtenerRolSesion } from '../utils/session';
 
 const inputBase =
   'w-full bg-surface-container-highest text-on-surface placeholder:text-secondary/50 pl-11 py-3 rounded-lg font-body-md text-body-md border border-transparent focus:border-primary-container focus:outline-none focus:ring-1 focus:ring-primary-container transition-all';
@@ -48,38 +49,32 @@ export default function SesionPage() {
 
   const handleSubirPem = async (e: ChangeEvent<HTMLInputElement>) => {
     const archivo = e.target.files?.[0];
+    e.target.value = ''; // permite volver a elegir el mismo archivo si falló
     if (!archivo) return;
 
+    const rolSesion = obtenerRolSesion();
+    if (!rolSesion) {
+      alert('Tu sesión expiró. Inicia sesión de nuevo.');
+      setPaso(1);
+      return;
+    }
+
     setIsInjecting(true);
-    const lector = new FileReader();
-    
-    lector.onload = async (evento) => {
-      const llaveTexto = evento.target?.result as string;
-      
-      try {
-        if (rol === 'pintor') {
-          await ejecutarAccion(Acciones.INYECCION_LLAVE_PRIVADA, { pem: llaveTexto, rol });
-        } else {
-          // El jurado sigue usando la RAM del worker
-          await ejecutarAccion(Acciones.INYECCION_LLAVE_PRIVADA, { pem: llaveTexto, rol: rol });
-        }
-        
-        // Redirigimos al panel
-        if (rol === 'pintor') {
-          navigate(PATHS.panelPintor);
-        } else {
-          navigate(PATHS.evaluacionJurado);
-        }
-        
-      } catch (err: any) {
-        console.error("Error inyectando la llave", err.message || err);
-        alert(err.message || "El archivo PEM no es valido o esta corrupto.");
-      } finally {
-        setIsInjecting(false);
-      }
-    };
-    
-    lector.readAsText(archivo); // Leemos como texto, no como Base64
+    try {
+      const llaveTexto = await archivo.text();
+      await ejecutarAccion(Acciones.INYECCION_LLAVE_PRIVADA, { pem: llaveTexto, rol: rolSesion });
+
+      const destino = {
+        pintor: PATHS.panelPintor,
+        jurado: PATHS.evaluacionJurado,
+        presidente: PATHS.vistoBuenoPresidente,
+      }[rolSesion];
+      navigate(destino);
+    } catch (err: any) {
+      alert(err.message || 'El archivo PEM no es válido o está corrupto.');
+    } finally {
+      setIsInjecting(false);
+    }
   };
 
 return (

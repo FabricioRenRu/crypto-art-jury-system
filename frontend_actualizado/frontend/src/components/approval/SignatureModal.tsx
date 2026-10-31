@@ -8,19 +8,19 @@
  * del HTML original, que mostraban/ocultaban elementos con classList.
  * El componente es "controlado": quien lo usa decide si está abierto y si ya se publicó.
  */
+/**
+ * components/approval/SignatureModal.tsx
+ */
 import { useEffect } from 'react';
 import Icon from '../ui/Icon';
 
 interface SignatureModalProps {
-  /** Si el modal se muestra o no. */
   isOpen: boolean;
-  /** true después de confirmar: cambia a la vista de éxito. */
   isPublished: boolean;
-  /** Cuántas obras se van a firmar (se muestra en el texto). */
   selectedCount: number;
+  isSigning: boolean; 
   onClose: () => void;
   onConfirm: () => void;
-  /** Se llama al pulsar "Aceptar" en la vista de éxito. */
   onAccept: () => void;
 }
 
@@ -28,22 +28,21 @@ export default function SignatureModal({
   isOpen,
   isPublished,
   selectedCount,
+  isSigning, 
   onClose,
   onConfirm,
   onAccept,
 }: SignatureModalProps) {
-  /**
-   * EFFECT: cerrar con la tecla Escape mientras el modal está abierto
-   * (solo en la vista de confirmación). Se quita el listener al cerrar.
-   */
+  
   useEffect(() => {
-    if (!isOpen || isPublished) return;
+    // Si está firmando, bloqueamos la tecla Escape
+    if (!isOpen || isPublished || isSigning) return;
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [isOpen, isPublished, onClose]);
+  }, [isOpen, isPublished, isSigning, onClose]);
 
   if (!isOpen) return null;
 
@@ -96,8 +95,9 @@ export default function SignatureModal({
               </div>
               <button
                 onClick={onClose}
+                disabled={isSigning} // 🔥 Bloqueamos botón cerrar
                 aria-label="Cerrar"
-                className="w-8 h-8 rounded hover:bg-surface-bright flex items-center justify-center text-on-surface-variant hover:text-on-surface"
+                className="w-8 h-8 rounded hover:bg-surface-bright flex items-center justify-center text-on-surface-variant hover:text-on-surface disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 <Icon name="close" className="text-[20px]" />
               </button>
@@ -112,16 +112,28 @@ export default function SignatureModal({
             <div className="flex items-center justify-end gap-space-sm pt-space-xs">
               <button
                 onClick={onClose}
-                className="px-4 py-2 rounded-lg bg-surface-container hover:bg-surface-bright text-on-surface font-label-md text-label-md uppercase transition-colors"
+                disabled={isSigning} //  Bloqueamos botón cancelar
+                className="px-4 py-2 rounded-lg bg-surface-container hover:bg-surface-bright text-on-surface font-label-md text-label-md uppercase transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancelar
               </button>
               <button
                 onClick={onConfirm}
-                className="px-6 py-2 rounded-lg bg-primary-container hover:bg-tertiary-container text-white font-label-md text-label-md uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(255,107,0,0.4)] flex items-center gap-2"
+                disabled={isSigning} 
+                className="px-6 py-2 rounded-lg bg-primary-container hover:bg-tertiary-container text-white font-label-md text-label-md uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(255,107,0,0.4)] flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                <Icon name="done_all" className="text-[18px]" />
-                <span>Confirmar y Publicar</span>
+                {/*  Cambiamos el icono y texto si está procesando */}
+                {isSigning ? (
+                  <>
+                    <Icon name="sync" className="text-[18px] animate-spin" />
+                    <span>Firmando Sobres...</span>
+                  </>
+                ) : (
+                  <>
+                    <Icon name="done_all" className="text-[18px]" />
+                    <span>Confirmar y Publicar</span>
+                  </>
+                )}
               </button>
             </div>
           </>

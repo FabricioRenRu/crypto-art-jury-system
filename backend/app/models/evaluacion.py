@@ -50,6 +50,12 @@ class Evaluacion(Base):
         Text, 
         nullable=True
     )  # s'
+
+    # Evaluación cifrada por el propio juez (nonce||AES-GCM||tag en base64). Se borra al publicar
+    evaluacion_cifrada: Mapped[str] = mapped_column(
+        Text,
+        nullable=True
+    )
     
     # === DATOS EN TEXTO CLARO  ===
     estrellas: Mapped[int] = mapped_column(

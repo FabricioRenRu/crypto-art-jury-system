@@ -2,8 +2,11 @@ from passlib.context import CryptContext
 from datetime import datetime, timedelta, timezone
 from jose import jwt
 from typing import Optional, Final, Any
+import os
+from dotenv import load_dotenv
 
-SECRET_KEY: Final[str] = "tu_super_secreto_criptografico_de_alta_entropia"  # Despues sacarlo de un .env
+load_dotenv()
+SECRET_KEY: Final[str] = os.environ["JWT_SECRET_KEY"]   # Despues sacarlo de un .env
 ALGORITHM: Final[str] = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES: Final[int] = 120
 

@@ -11,3 +11,15 @@ export const PROFILE_AVATAR_URL =
 /** Avatar por defecto del formulario de registro del pintor (hasta que suba su foto). */
 export const DEFAULT_AVATAR_URL =
   'https://lh3.googleusercontent.com/aida-public/AB6AXuAwCuxkk0R98JQKAyb8zVPXSR2RN8dvABhA7ba3moe0iRWkLlnCfpAvwDK-M_YgvN3t6kU0vIX7WUVViyQrEiAkr9NJzqJQJletuae2DpECmdnXGzKznnAHjD5MeHSkEjD_6l4B_9DooA73qjk_Tw9GYoBp_MFvO2frriwzgaMrFHxJ0jFqLARtq9LokYQOI1xvzy-YEZ-JN-FPgzbLEBDnB6Y6GNmgLxTo8UiRXIkWsze6W86QI3DD';
+
+
+  /** Placeholder para obras cuya imagen sigue cifrada (el público no tiene la llave AES). */
+export const OBRA_PROTEGIDA_URL =
+  'data:image/svg+xml;utf8,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400">' +
+      '<rect width="600" height="400" fill="#1f2020"/>' +
+      '<text x="300" y="190" fill="#ff6b00" font-family="sans-serif" font-size="56" text-anchor="middle">&#128274;</text>' +
+      '<text x="300" y="250" fill="#e2bfb0" font-family="sans-serif" font-size="22" text-anchor="middle">Obra protegida (cifrada)</text>' +
+    '</svg>',
+  );

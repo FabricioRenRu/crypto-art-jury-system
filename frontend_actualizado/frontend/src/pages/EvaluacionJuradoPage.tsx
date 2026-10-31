@@ -16,6 +16,8 @@ import { useJuryEvaluation } from '../hooks/useJuryEvaluation';
 import { useJuryQueue } from '../hooks/useJuryQueue';
 import { STAR_OPTIONS } from '../data/juryQueue';
 import type { JuryArtwork } from '../types';
+import PublicationBanner from '../components/jury/PublicationBanner';
+import { usePublicacionJurado } from '../hooks/usePublicacionJurado';
 
 function MensajeMesa({ icono, texto, onReintentar }: { icono: string; texto: string; onReintentar?: () => void }) {
   return (
@@ -39,16 +41,8 @@ function MensajeMesa({ icono, texto, onReintentar }: { icono: string; texto: str
 
 function MesaCalificacion({ queue, initialRatedIds }: { queue: JuryArtwork[]; initialRatedIds: string[] }) {
   const {
-    currentIndex,
-    currentArtwork,
-    currentDraft,
-    ratedIds,
-    saveStatus,
-    updateDraft,
-    goTo,
-    goNext,
-    goPrevious,
-    saveRating,
+    currentIndex, currentArtwork, currentDraft, ratedIds, saveStatus, errorMessage,
+    updateDraft, goTo, goNext, goPrevious, saveRating,
   } = useJuryEvaluation(queue, initialRatedIds);
 
   return (
@@ -62,6 +56,8 @@ function MesaCalificacion({ queue, initialRatedIds }: { queue: JuryArtwork[]; in
             options={STAR_OPTIONS}
             draft={currentDraft}
             saveStatus={saveStatus}
+            errorMessage={errorMessage}
+            isRated={ratedIds.includes(currentArtwork.id)}
             onChangeStars={(stars) => updateDraft({ stars })}
             onChangeComment={(comment) => updateDraft({ comment })}
             onSave={saveRating}
@@ -84,6 +80,9 @@ function MesaCalificacion({ queue, initialRatedIds }: { queue: JuryArtwork[]; in
 
 export default function EvaluacionJuradoPage() {
   const { queue, ratedIds, isLoading, error, recargar } = useJuryQueue();
+  /** HOOK: pasos 7-9 (recoger s', descegar, firmar con PSS y publicar). Espera a que la cola cargue,
+   *  porque ahí se inyecta la llave pública del presidente en el worker. */
+  const publicacion = usePublicacionJurado(!isLoading && !error);
 
   let contenido;
   if (isLoading) {
@@ -98,6 +97,18 @@ export default function EvaluacionJuradoPage() {
 
   return (
     <div className="flex flex-col w-full">
+      {!isLoading && !error && (
+        <PublicationBanner
+          esperando={publicacion.esperando}
+          firmadas={publicacion.firmadas}
+          publicadas={publicacion.publicadas}
+          ultimasPublicadas={publicacion.ultimasPublicadas}
+          isPublishing={publicacion.isPublishing}
+          error={publicacion.error}
+          onPublicar={publicacion.publicarFirmadas}
+          onRefrescar={publicacion.refrescar}
+        />
+      )}
       {contenido}
     </div>
   );
