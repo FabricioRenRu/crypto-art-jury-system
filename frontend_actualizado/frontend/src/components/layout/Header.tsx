@@ -2,23 +2,33 @@
  * components/layout/Header.tsx
  * Encabezado fijo con logo, menú de navegación y acciones de la derecha.
  *
- * Tiene dos variantes porque los HTML originales traían encabezados distintos:
- *  - "public"      (Inicio): botones "Iniciar Sesión" y "Registrarse", sin logo de imagen.
- *  - "competition" (resto):  logo, insignia "FASE EN VIVO" y botón "Competir Ahora".
- *
- * El enlace activo se resalta automáticamente con <NavLink> de React Router
- * (en el HTML se hacía a mano con aria-current="page").
+ * El menú depende del tipo de usuario (se lee del JWT):
+ *  - público (sin sesión): Inicio, Registro Pintor, Resultados + "Iniciar Sesión" / "Registrarse"
+ *  - pintor:     Inicio, Panel Pintor, Resultados
+ *  - juez:       Inicio, Evaluación Jurado, Resultados
+ *  - presidente: Inicio, Visto Bueno Presidente, Resultados
+ * Con sesión se muestra el rol y el botón "Cerrar sesión".
+ * Ocultar enlaces es solo comodidad: las páginas siguen protegidas por RequireVault y por el backend.
  */
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import Icon from '../ui/Icon';
-import { MAIN_NAV } from '../../data/navigation';
+import { navegacionPara } from '../../data/navigation';
 import { LOGO_URL, PROFILE_AVATAR_URL } from '../../data/assets';
 import { PATHS } from '../../routes/paths';
-import type { HeaderVariant } from '../../types';
+import { useCryptoWorker } from '../../hooks/useCryptoWorker';
+import { Acciones } from '../../workers/crypto.actions';
+import { obtenerRolSesion } from '../../utils/session';
+import type { HeaderVariant, RolUsuario } from '../../types';
 
 interface HeaderProps {
   variant?: HeaderVariant;
 }
+
+const ETIQUETA_ROL: Record<Exclude<RolUsuario, 'publico'>, string> = {
+  pintor: 'Pintor',
+  jurado: 'Juez',
+  presidente: 'Presidente',
+};
 
 const navBase = 'px-3 py-1.5 rounded transition-colors whitespace-nowrap';
 const navActive = 'bg-primary-container text-on-primary font-bold';
@@ -30,11 +40,32 @@ const ctaButton =
 
 export default function Header({ variant = 'competition' }: HeaderProps) {
   const isCompetition = variant === 'competition';
+  const navigate = useNavigate();
+  const { ejecutarAccion } = useCryptoWorker();
+
+  /** HOOK: hace que el Header se vuelva a pintar en cada navegación, así el rol se actualiza
+   *  justo después de iniciar o cerrar sesión. */
+  useLocation();
+
+  /** Rol actual según el JWT (o 'publico' si no hay sesión o ya expiró). */
+  const rol: RolUsuario = obtenerRolSesion() ?? 'publico';
+  const enlaces = navegacionPara(rol);
+
+  /** Borra el JWT y las llaves de la RAM del worker. */
+  const cerrarSesion = async () => {
+    sessionStorage.removeItem('access_token');
+    try {
+      await ejecutarAccion(Acciones.CERRAR_SESION);
+    } catch {
+      // Si el worker falló, sus llaves igual se pierden al recargar la página
+    }
+    navigate(PATHS.inicio);
+  };
 
   return (
     <header className="fixed top-0 left-0 w-full z-50 bg-surface-container-highest/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.35)]">
       <div className="h-20 w-full px-gutter flex items-center justify-between gap-space-md">
-        {/* Logo + insignia de fase */}
+        {/* Logo */}
         <div className="flex items-center gap-space-md shrink-0">
           <Link to={PATHS.inicio} className="flex items-center gap-space-sm">
             {isCompetition && (
@@ -46,9 +77,9 @@ export default function Header({ variant = 'competition' }: HeaderProps) {
           </Link>
         </div>
 
-        {/* Menú principal */}
+        {/* Menú principal (filtrado por rol) */}
         <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
-          {MAIN_NAV.map((item) => (
+          {enlaces.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
@@ -62,19 +93,7 @@ export default function Header({ variant = 'competition' }: HeaderProps) {
 
         {/* Acciones derecha */}
         <div className="flex items-center gap-space-sm shrink-0">
-          <button
-            aria-label="Notificaciones"
-            className="w-10 h-10 flex items-center justify-center rounded text-on-surface-variant hover:text-on-surface hover:bg-surface-bright transition-colors relative"
-          >
-            <Icon name="notifications" className="text-[20px]" />
-            <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary-container ring-2 ring-surface-variant" />
-          </button>
-
-          {isCompetition ? (
-            <Link to={PATHS.registroPintor} className={`hidden sm:inline-flex px-4 py-2 ${ctaButton}`}>
-              Competir Ahora
-            </Link>
-          ) : (
+          {rol === 'publico' ? (
             <div className="hidden sm:flex items-center gap-2">
               <Link to={PATHS.sesion} className={`px-3 py-2 ${ctaButton}`}>
                 Iniciar Sesión
@@ -83,15 +102,27 @@ export default function Header({ variant = 'competition' }: HeaderProps) {
                 Registrarse
               </Link>
             </div>
+          ) : (
+            <>
+              <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container font-label-sm text-label-sm uppercase tracking-wider text-primary">
+                <Icon name="badge" className="text-[16px]" />
+                {ETIQUETA_ROL[rol]}
+              </span>
+              <button
+                type="button"
+                onClick={cerrarSesion}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded bg-surface-container hover:bg-surface-bright text-on-surface font-label-md text-label-md uppercase tracking-wider transition-colors"
+              >
+                <Icon name="logout" className="text-[18px]" />
+                <span className="hidden sm:inline">Cerrar sesión</span>
+              </button>
+              <img
+                alt="Perfil"
+                className="w-8 h-8 rounded-full object-cover ring-1 ring-primary-container/40"
+                src={PROFILE_AVATAR_URL}
+              />
+            </>
           )}
-
-          <div className="flex items-center pl-space-xs">
-            <img
-              alt="Perfil"
-              className="w-8 h-8 rounded-full object-cover ring-1 ring-primary-container/40"
-              src={PROFILE_AVATAR_URL}
-            />
-          </div>
         </div>
       </div>
     </header>

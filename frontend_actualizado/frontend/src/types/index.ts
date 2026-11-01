@@ -4,10 +4,14 @@
  * (navegación, categorías, fases del concurso y obras a validar).
  */
 
-/** Un enlace del menú de navegación principal. */
+/** Tipo de usuario que ve la página ('publico' = sin sesión). */
+export type RolUsuario = 'publico' | 'pintor' | 'jurado' | 'presidente';
+
+/** Un enlace del menú de navegación. Sin `roles` lo ven todos. */
 export interface NavItem {
   label: string;
   path: string;
+  roles?: RolUsuario[];
 }
 
 /** Una categoría oficial del concurso (tarjetas de la página de Inicio). */

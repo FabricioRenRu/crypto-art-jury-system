@@ -25,7 +25,8 @@ const MAPA_FUNCIONES: Record<string, string> = {
   [Acciones.CEGAR_EVALUACION]: 'preparar_evaluacion_cegada',
   [Acciones.FIRMA_CIEGA]: 'blind_signature',
   [Acciones.PREPARAR_PUBLICACION]: 'preparar_publicacion',
-  [Acciones.VERIFICAR_EVALUACION_PUBLICA]: 'verificar_evaluacion_publica'
+  [Acciones.VERIFICAR_EVALUACION_PUBLICA]: 'verificar_evaluacion_publica',
+  [Acciones.CERRAR_SESION]: 'cerrar_sesion',
 };
 
 /** Módulos que se copian al sistema de archivos virtual de Pyodide antes de correr main.py */

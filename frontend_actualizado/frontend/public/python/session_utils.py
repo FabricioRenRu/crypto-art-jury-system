@@ -108,3 +108,11 @@ def verificar_boveda(payload=None) -> dict[str, Any]:
         "lista": estado_sesion["llave_privada_pem"] is not None,
         "rol": estado_sesion["rol"],
     }
+
+def cerrar_sesion(payload: Any = None) -> dict[str, bool]:
+    """Borra de la RAM del worker la llave privada, el rol, la llave del presidente y las llaves AES."""
+    limpiar_llaves_sesion()
+    estado_sesion["llave_privada_pem"] = None
+    estado_sesion["rol"] = None
+    estado_sesion["llave_publica_presidente"] = None
+    return {"cerrada": True}

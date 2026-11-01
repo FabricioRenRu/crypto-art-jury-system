@@ -4,7 +4,7 @@
  * el segundo (plata) y el tercero (bronce) usan el estilo compacto.
  */
 import Icon from '../ui/Icon';
-import { averageScore } from '../../utils/scores';
+import { maxStars, totalStars } from '../../utils/scores';
 import type { Finalist } from '../../types';
 
 interface PodiumCardProps {
@@ -18,7 +18,8 @@ const MEDALS: Record<number, { label: string; text: string; badge: string }> = {
 
 export default function PodiumCard({ finalist }: PodiumCardProps) {
   const isFirst = finalist.position === 1;
-  const average = averageScore(finalist.juryScores).toFixed(1);
+  const total = totalStars(finalist.juryScores);
+  const maximo = maxStars(finalist.juryScores);
   const medal = MEDALS[finalist.position];
 
   if (isFirst) {
@@ -64,8 +65,8 @@ export default function PodiumCard({ finalist }: PodiumCardProps) {
               <div className="flex items-center gap-1.5 mt-1">
                 <Icon name="star" filled className="text-[28px] text-primary" />
                 <span className="font-display-mobile text-display-mobile text-primary font-bold leading-none">
-                  {average}
-                  <span className="font-headline-sm text-headline-sm text-secondary ml-1">/ 9</span>
+                  {total}
+                  <span className="font-headline-sm text-headline-sm text-secondary ml-1">/ {maximo}</span>
                 </span>
               </div>
             </div>
@@ -116,8 +117,8 @@ export default function PodiumCard({ finalist }: PodiumCardProps) {
             <div className="flex items-center gap-1 mt-0.5">
               <Icon name="star" filled className={`text-[20px] ${finalist.position === 2 ? 'text-primary' : 'text-tertiary'}`} />
               <span className="font-headline-sm text-headline-sm text-on-surface font-bold">
-                {average}
-                <span className="font-label-sm text-label-sm text-secondary ml-1">/ 9</span>
+                  {total}
+                  <span className="font-headline-sm text-headline-sm text-secondary ml-1">/ {maximo}</span>
               </span>
             </div>
           </div>
