@@ -26,12 +26,16 @@ const MAPA_FUNCIONES: Record<string, string> = {
   [Acciones.FIRMA_CIEGA]: 'blind_signature',
   [Acciones.PREPARAR_PUBLICACION]: 'preparar_publicacion',
   [Acciones.VERIFICAR_EVALUACION_PUBLICA]: 'verificar_evaluacion_publica',
+  [Acciones.GENERAR_SOBRE_PINTOR]: 'generar_sobre_pintor',
+  [Acciones.ABRIR_SOBRE_PINTOR]: 'abrir_sobre_pintor',
+  [Acciones.DESCIFRAR_OBRA_PUBLICA]: 'descifrar_obra_publica',
   [Acciones.CERRAR_SESION]: 'cerrar_sesion',
 };
 
 /** Módulos que se copian al sistema de archivos virtual de Pyodide antes de correr main.py */
 const MODULOS_PYTHON = [
-  'rsa_utils', 'aes_utils', 'ecdsa_utils', 'session_utils', 'sobre_llave_utils', 'blind_signature_utils',
+  'rsa_utils', 'aes_utils', 'ecdsa_utils', 'session_utils', 'sobre_llave_utils',
+  'sobre_pintor_utils', 'blind_signature_utils',
 ];
 
 let pyodide: any = null;

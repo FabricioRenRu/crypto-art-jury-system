@@ -9,7 +9,9 @@ from Crypto.Hash import SHA256
 from Crypto.PublicKey import ECC, RSA
 from Crypto.Signature import DSS, pss
 from Crypto.Util.number import bytes_to_long
+from Crypto.Cipher import AES
 
+PREFIJO_AAD_OBRA: Final[str] = "concurso-pintura:obra:"
 LONGITUD_NONCE: Final[int] = 12
 LONGITUD_TAG: Final[int] = 16
 BITS_MINIMOS_LLAVE: Final[int] = 2048
@@ -120,4 +122,19 @@ def es_base64(valor: str) -> bool:
         base64.b64decode(valor, validate=True)
         return True
     except (binascii.Error, ValueError):
+        return False
+
+def llave_abre_obra(llave: bytes, paquete: bytes, id_pintura) -> bool:
+    """
+    True si K_AES descifra y autentica el paquete nonce||ciphertext||tag de esa obra.
+    Se usa en la revelación: el tag de AES-GCM prueba que la llave es la correcta.
+    """
+    if len(llave) != 32 or len(paquete) <= LONGITUD_NONCE + LONGITUD_TAG:
+        return False
+    try:
+        descifrador = AES.new(llave, AES.MODE_GCM, nonce=paquete[:LONGITUD_NONCE], mac_len=LONGITUD_TAG)
+        descifrador.update((PREFIJO_AAD_OBRA + str(id_pintura)).encode("utf-8"))
+        descifrador.decrypt_and_verify(paquete[LONGITUD_NONCE:-LONGITUD_TAG], paquete[-LONGITUD_TAG:])
+        return True
+    except ValueError:
         return False

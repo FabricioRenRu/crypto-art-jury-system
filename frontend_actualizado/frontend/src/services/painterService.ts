@@ -32,6 +32,7 @@ export const painterService = {
     titulo: string,
     descripcion: string,
     sobres: SobresJurado,
+    sobrePintor: string,
   ) => {
     const form = new FormData();
     const datosCifrados = new ArrayBuffer(pintura.cifrado.byteLength);
@@ -49,6 +50,7 @@ export const painterService = {
     form.append('titulo', titulo);
     form.append('descripcion', descripcion);
     form.append('sobres', JSON.stringify(sobres));
+    form.append('sobre_pintor', sobrePintor);
     return apiRequest<PinturaResponse>(ENDPOINTS.PINTURAS.CARGAR, {
       method: 'POST',
       body: form,

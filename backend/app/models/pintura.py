@@ -4,7 +4,7 @@ from sqlalchemy import ForeignKey, func, String, Text, DateTime
 from datetime import datetime
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
     from app.models.pintor import Pintor
     from app.models.evaluacion import Evaluacion
@@ -61,6 +61,12 @@ class Pintura(Base):
         Text, 
         nullable=False
     )
+
+    # K_AES envuelta con una llave derivada de la ECDSA del pintor. Solo él la abre
+    sobre_pintor: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # K_AES publicada cuando los jueces publican sus evaluaciones (base64)
+    llave_aes_revelada: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # relacion 1:1 con Pintor
     pintor: Mapped["Pintor"]  = relationship(

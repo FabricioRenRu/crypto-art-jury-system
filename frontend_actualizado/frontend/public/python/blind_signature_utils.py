@@ -31,6 +31,7 @@ from Crypto.Signature import pss
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 
 from session_utils import obtener_llave_actual, obtener_llave_presidente, obtener_rol_actual
+from aes_utils import obtener_llave_sesion
 
 ESTRELLAS_VALIDAS: Final[tuple[int, ...]] = (1, 2, 3)
 MAX_COMENTARIO: Final[int] = 1000
@@ -90,6 +91,7 @@ class ResultadoPublicacion(TypedDict):
     hash_original: str       # h en decimal
     firma_descegada: str     # s en decimal (firma del presidente)
     firma_juez: str          # RSA-PSS del juez, base64
+    llave_aes: str 
 
 
 # ---- Paso 10: VERIFICAR_EVALUACION_PUBLICA (cualquiera) --------------------
@@ -317,6 +319,11 @@ def preparar_publicacion(payload_js: Any) -> ResultadoPublicacion:
     # 4. Firma propia del juez (no repudio), RSA-PSS con SHA-256
     firma_juez: bytes = pss.new(llave_juez).sign(SHA256.new(texto))
 
+    # 5. K_AES de la obra (revelación). El worker la tiene porque el juez abrió su sobre al cargar la mesa
+    llave_aes: bytes | None = obtener_llave_sesion(id_pintura)
+    if llave_aes is None:
+        raise ValueError("Primero abre la obra (recarga la mesa de calificación) para poder publicar.")
+
     return {
         "estrellas": estrellas,
         "comentario": comentario,
@@ -324,6 +331,7 @@ def preparar_publicacion(payload_js: Any) -> ResultadoPublicacion:
         "hash_original": str(h),
         "firma_descegada": str(s),
         "firma_juez": _b64(firma_juez),
+        "llave_aes": _b64(llave_aes),
     }
 
 

@@ -10,6 +10,10 @@ import app.services.presidente_service as presidente_service
 from app.schemas.resultados_schemas import EvaluacionPublica, ObraPublica, TableroPublicoResponse
 from app.services.jurado_service import codigo_anonimo
 from app.utils import crypto
+import uuid
+import app.repositories.pinturas_repository as pinturas_repository
+import app.services.pinturas_service as pinturas_service
+from app.exceptions.custom_exceptions import RecursoNoEncontradoException
 
 
 def obtener_tablero_publico(db: Session) -> TableroPublicoResponse:
@@ -57,6 +61,8 @@ def obtener_tablero_publico(db: Session) -> TableroPublicoResponse:
                 total_estrellas=sum(e.estrellas for e in publicas),
                 posicion=0,
                 evaluaciones=publicas,
+                tipo_mime=pintura.mime_type,
+                llave_aes=pintura.llave_aes_revelada,
             )
         )
 
@@ -65,3 +71,11 @@ def obtener_tablero_publico(db: Session) -> TableroPublicoResponse:
         obra.posicion = indice
 
     return TableroPublicoResponse(llave_publica_presidente=llave_presidente, obras=obras)
+
+
+def obtener_imagen_cifrada_publica(db: Session, id_pintura: uuid.UUID) -> bytes:
+    """Paquete cifrado de una obra ya revelada (sin la llave revelada no se sirve)."""
+    pintura = pinturas_repository.find_by_id(db, id_pintura)
+    if pintura is None or pintura.llave_aes_revelada is None:
+        raise RecursoNoEncontradoException("La obra todavía no se ha revelado.")
+    return pinturas_service.leer_paquete_cifrado(pintura)

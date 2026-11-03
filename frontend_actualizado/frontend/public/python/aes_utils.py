@@ -5,6 +5,7 @@ import json
 
 from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
+from typing import TypedDict, Any, cast
 
 TAM_LLAVE = 32
 TAM_NONCE = 12
@@ -101,3 +102,30 @@ def guardar_llave_sesion(id_pintura, llave):
 
 def limpiar_llaves_sesion():
     _LLAVES_AES_SESION.clear()
+
+
+# ---- DESCIFRAR_OBRA_PUBLICA (cualquiera, ya en resultados) ------------------
+class PayloadObraPublica(TypedDict):
+    id_pintura: str
+    llave_aes: str           # K_AES revelada en el tablero público (base64)
+    cifrado: Any             # Uint8Array: nonce(12) || ciphertext || tag(16)
+
+
+class ResultadoObraPublica(TypedDict):
+    datos: bytes             # imagen en claro (llega a JS como Uint8Array)
+
+
+def descifrar_obra_publica(payload_js: Any) -> ResultadoObraPublica:
+    """
+    Descifra una obra ya revelada. No usa la sesión ni ninguna llave privada: la llave
+    viene del tablero público, así que cualquier visitante puede ver el podio.
+    """
+    payload = cast(PayloadObraPublica, _a_python(payload_js))
+    llave: bytes = base64.b64decode(payload["llave_aes"], validate=True)
+    paquete: bytes = _a_bytes(payload["cifrado"])
+    if len(llave) != TAM_LLAVE or len(paquete) <= TAM_NONCE + TAM_TAG:
+        raise ValueError("Llave AES o paquete cifrado inválido.")
+
+    descifrador = AES.new(llave, AES.MODE_GCM, nonce=paquete[:TAM_NONCE], mac_len=TAM_TAG)
+    descifrador.update(_aad(payload["id_pintura"]))
+    return {"datos": descifrador.decrypt_and_verify(paquete[TAM_NONCE:-TAM_TAG], paquete[-TAM_TAG:])}

@@ -37,6 +37,7 @@ export interface PinturaResponse {
   tipo_mime: string;
   hash_pintura_cifrada: string;
   firma_consentimiento: string;
+    sobre_pintor: string | null; // K_AES envuelta para el propio pintor (null en obras viejas)
 }
 
 /** GET /api/pinturas/mis-obras */

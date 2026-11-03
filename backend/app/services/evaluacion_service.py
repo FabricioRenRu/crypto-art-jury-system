@@ -9,6 +9,7 @@ import app.repositories.pinturas_repository as pinturas_repository
 import app.repositories.evaluaciones_repository as evaluaciones_repository
 import app.repositories.jurado_repository as jurado_repository
 import app.services.presidente_service as presidente_service
+import app.services.pinturas_service as pinturas_service
 from app.exceptions.custom_exceptions import *
 from app.models.evaluacion import Evaluacion, EstadoEvaluacion
 import logging
@@ -138,7 +139,7 @@ def publicar_evaluacion(db: Session, payload: PublicarEvaluacionRequest, juez_id
         )
 
     juez = jurado_repository.find_by_id(db, juez_id)
-    
+
     if juez is None or not juez.clave_publica_rsa:
         raise RecursoNoEncontradoException("No se encontró la llave pública del juez.")
 
@@ -152,6 +153,9 @@ def publicar_evaluacion(db: Session, payload: PublicarEvaluacionRequest, juez_id
         raise FirmaInvalidaException("La firma del presidente no corresponde a esta evaluación.")
     if not crypto.verificar_pss(juez.clave_publica_rsa, texto, payload.firma_juez):
         raise FirmaInvalidaException("La firma RSA-PSS del juez no es válida.")
+
+    # Revelación: la K_AES que manda el juez debe abrir la obra; se guarda en el mismo commit
+    pinturas_service.revelar_llave(evaluacion.pintura, payload.llave_aes)
 
     evaluaciones_repository.publicar(
         db,

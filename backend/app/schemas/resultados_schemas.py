@@ -3,7 +3,7 @@
 Tablero público (paso 10): todo lo necesario para verificar sin confiar en el servidor.
 """
 import uuid
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -29,6 +29,8 @@ class ObraPublica(BaseModel):
     total_estrellas: int
     posicion: int
     evaluaciones: List[EvaluacionPublica]
+    tipo_mime: str
+    llave_aes: Optional[str] = None  # K_AES revelada: con ella cualquiera descifra la obra
 
 
 class TableroPublicoResponse(BaseModel):

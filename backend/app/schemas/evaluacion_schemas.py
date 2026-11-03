@@ -51,7 +51,7 @@ class PublicarEvaluacionRequest(BaseModel):
     comentario: str = Field("", max_length=1000)
     firma_descegada: NumeroRSA                                     # s del presidente
     firma_juez: str = Field(..., min_length=100, max_length=1100)  # RSA-PSS del juez, base64
-
+    llave_aes: str = Field(..., min_length=44, max_length=44)  # K_AES de la obra (32 bytes en base64)
 
 class PublicarEvaluacionResponse(BaseModel):
     id_evaluacion: uuid.UUID

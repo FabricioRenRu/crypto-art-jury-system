@@ -61,6 +61,7 @@ export const ENDPOINTS = {
 
   RESULTADOS: {
     TABLERO_PUBLICO: '/api/resultados/tablero-publico',
+    IMAGEN_CIFRADA: (idPintura: string) => `/api/resultados/obras/${idPintura}/imagen-cifrada`,
   }
 
 } as const;

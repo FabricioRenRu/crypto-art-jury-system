@@ -20,6 +20,7 @@ interface PublicacionPreparada {
   hash_original: string;
   firma_descegada: string;
   firma_juez: string;
+  llave_aes: string
 }
 
 export function usePublicacionJurado(habilitado: boolean) {
@@ -84,6 +85,7 @@ export function usePublicacionJurado(habilitado: boolean) {
           comentario: pub.comentario,
           firma_descegada: pub.firma_descegada,
           firma_juez: pub.firma_juez,
+          llave_aes: pub.llave_aes,
         });
         exitosas++;
       }

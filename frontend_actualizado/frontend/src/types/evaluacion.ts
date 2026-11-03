@@ -56,6 +56,7 @@ export interface PublicarEvaluacionRequest {
   comentario: string;
   firma_descegada: string; // s en decimal
   firma_juez: string;      // RSA-PSS en base64
+  llave_aes: string;       // K_AES de la obra (revelación), base64
 }
 
 export interface PublicarEvaluacionResponse {
@@ -85,6 +86,8 @@ export interface ObraPublica {
   total_estrellas: number;
   posicion: number;
   evaluaciones: EvaluacionPublica[];
+  tipo_mime: string;
+  llave_aes: string | null; // K_AES revelada: con ella cualquiera descifra la obra
 }
 
 export interface TableroPublicoResponse {

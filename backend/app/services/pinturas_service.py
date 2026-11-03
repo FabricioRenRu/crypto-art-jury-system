@@ -18,6 +18,7 @@ from app.exceptions.custom_exceptions import (
     ArchivoInvalidoException,
     PinturaYaExistenteException,
     RecursoNoEncontradoException,
+    FirmaInvalidaException
 )
 from app.models.evaluacion import EstadoEvaluacion
 from app.models.pintura import Pintura
@@ -33,6 +34,7 @@ TOTAL_SLOTS: Final[int] = 1  # una pintura por pintor (Pintura.pintor_id es unic
 MAX_BYTES: Final[int] = int(os.getenv("MAX_UPLOAD_MB", "50")) * 1024 * 1024
 MAX_PALABRAS_DESCRIPCION: Final[int] = 500
 STORAGE_DIR: Final[str] = os.getenv("STORAGE_DIR", "storage/pinturas_cifradas")
+TAMANO_SOBRE_PINTOR: Final[int] = 60  # nonce(12) + K_AES cifrada(32) + tag(16)
 
 os.makedirs(STORAGE_DIR, exist_ok=True)
 
@@ -55,6 +57,7 @@ def _a_response(pintura: Pintura) -> PinturaResponse:
         tipo_mime=pintura.mime_type,
         hash_pintura_cifrada=pintura.hash_pintura_cifrada,
         firma_consentimiento=pintura.firma_consentimiento,
+        sobre_pintor=pintura.sobre_pintor,
     )
 
 
@@ -134,6 +137,7 @@ def cargar_pintura(
     titulo: str,
     descripcion: str,
     sobres_json: str,
+    sobre_pintor_b64: str,
 ) -> PinturaResponse:
     id_pintor = uuid.UUID(payload_token["sub"])
 
@@ -194,6 +198,13 @@ def cargar_pintura(
 
     hash_cifrado = crypto.sha256_hex(contenido)
 
+        # Sobre del propio pintor: el servidor solo revisa forma y tamaño, no lo puede abrir
+    try:
+        if len(base64.b64decode(sobre_pintor_b64, validate=True)) != TAMANO_SOBRE_PINTOR:
+            raise ValueError("Tamaño inválido")
+    except (binascii.Error, ValueError) as exc:
+        raise ArchivoInvalidoException("El sobre del pintor no es válido.") from exc
+
     # CK = RSA-OAEP(PK_juez, K_AES): se armaron en el navegador, aqui solo se validan
     sobres = []
     for id_juez, sobre_b64 in _validar_sobres(db, sobres_json):
@@ -215,6 +226,7 @@ def cargar_pintura(
         hash_pintura_cifrada=hash_cifrado,
         documento_consentimiento=documento,
         firma_consentimiento=firma_hex,
+        sobre_pintor=sobre_pintor_b64,
     )
     try:
         pinturas_repository.save_con_sobres(db, pintura, sobres)
@@ -275,3 +287,28 @@ def descargar_para_juez(db: Session, payload_token: dict, id_pintura: uuid.UUID)
         hash_pintura_cifrada=pintura.hash_pintura_cifrada,
         sobre_llave=sobre.llave_aes_cifrada,
     )
+
+
+def leer_paquete_cifrado(pintura: Pintura) -> bytes:
+    """Bytes nonce||ciphertext||tag de una obra."""
+    try:
+        with open(_ruta_absoluta(pintura.ruta_pintura_cifrada), "rb") as f:
+            return f.read()
+    except FileNotFoundError as exc:
+        logger.error("No se encontró el paquete cifrado de la pintura %s", pintura.id)
+        raise RecursoNoEncontradoException("No se pudo recuperar la pintura cifrada.") from exc
+
+
+def revelar_llave(pintura: Pintura, llave_b64: str) -> None:
+    """
+    Revelación: comprueba que la K_AES enviada por un juez abre la obra y la guarda
+    (sin commit; lo hace quien llama) para mostrarla en el tablero público.
+    """
+    try:
+        llave = base64.b64decode(llave_b64, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise FirmaInvalidaException("La llave AES no está en base64.") from exc
+    if not crypto.llave_abre_obra(llave, leer_paquete_cifrado(pintura), pintura.id):
+        raise FirmaInvalidaException("La llave AES no corresponde a esta obra.")
+    if pintura.llave_aes_revelada is None:
+        pintura.llave_aes_revelada = llave_b64

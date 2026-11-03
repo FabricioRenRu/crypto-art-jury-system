@@ -46,12 +46,25 @@ export const usePainterPanel = () => {
   // object URLs de las imágenes descifradas; se liberan al desmontar
   const urlsRef = useRef<string[]>([]);
 
+  
   const aArtwork = useCallback(async (obra: PinturaResponse): Promise<PainterArtwork> => {
     let imageUrl = '';
-    const llaveDisponible = await ejecutarAccion(Acciones.VERIFICAR_LLAVE_AES, {
-      id_pintura: obra.id,
-    });
-    if (llaveDisponible.disponible) {
+    let { disponible } = await ejecutarAccion(Acciones.VERIFICAR_LLAVE_AES, { id_pintura: obra.id });
+
+    // Después de un F5 la K_AES ya no está en memoria: se recupera del sobre del pintor
+    if (!disponible && obra.sobre_pintor) {
+      try {
+        await ejecutarAccion(Acciones.ABRIR_SOBRE_PINTOR, {
+          id_pintura: obra.id,
+          sobre_pintor: obra.sobre_pintor,
+        });
+        disponible = true;
+      } catch (err) {
+        console.warn('No se pudo abrir el sobre del pintor:', err);
+      }
+    }
+
+    if (disponible) {
       const blobCifrado = await painterService.obtenerImagen(obra.id);
       const resultado = await ejecutarAccion(Acciones.DESCIFRAR_PINTURA, {
         id_pintura: obra.id,
@@ -120,6 +133,10 @@ export const usePainterPanel = () => {
         id_pintura: idPintura,
         jueces: llavesJurado.jueces,
       });
+      // Sobre para el propio pintor: así puede volver a ver su obra después de un F5
+      const { sobre_pintor } = await ejecutarAccion(Acciones.GENERAR_SOBRE_PINTOR, {
+        id_pintura: idPintura,
+      });
       const consentimiento = await ejecutarAccion(Acciones.FIRMAR_CONSENTIMIENTO, {
         id_pintura: idPintura,
         id_pintor: obtenerIdPintorDeSesion(),
@@ -138,6 +155,7 @@ export const usePainterPanel = () => {
         data.title,
         data.description,
         sobres.sobres,
+        sobre_pintor
       );
       const nueva = await aArtwork(obra);
       setArtworks((actuales) => [...actuales, nueva]);

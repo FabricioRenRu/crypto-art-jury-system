@@ -81,6 +81,7 @@ class PinturaResponse(BaseModel):
     tipo_mime: str
     hash_pintura_cifrada: str
     firma_consentimiento: str
+    sobre_pintor: Optional[str] = None  # K_AES envuelta para el dueño (solo se le manda a él)
 
 
 class MisObrasResponse(BaseModel):

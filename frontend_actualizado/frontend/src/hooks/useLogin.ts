@@ -3,9 +3,9 @@
  */
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+
 import { authService } from "../services/authService";
-import { PATHS } from "../routes/paths";
+
 
 export type RolLogin = 'pintor' | 'jurado';
 
@@ -13,7 +13,7 @@ export type RolLogin = 'pintor' | 'jurado';
 export const useLogin = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<String | null>(null);
-    const navigate = useNavigate();
+
 
     const login = async (email: string, contrasena: string, rol: RolLogin) => {
         setIsLoading(true);

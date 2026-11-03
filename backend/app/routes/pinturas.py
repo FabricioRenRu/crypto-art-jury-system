@@ -36,8 +36,11 @@ def cargar_pintura(
     titulo: str = Form(...),
     descripcion: str = Form(...),
     sobres: str = Form(...),
+     sobre_pintor: str = Form(...),
     payload: dict = Depends(require_pintor),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    
+   
 ):
     """
     Explicación: Recibe la imagen cifrada, el consentimiento firmado y los sobres RSA-OAEP armados
@@ -50,7 +53,7 @@ def cargar_pintura(
     contenido: bytes = archivo.file.read(pinturas_service.MAX_BYTES + 29)
     return pinturas_service.cargar_pintura(
         db, payload, contenido, id_pintura, tipo_mime, tamano_original,
-        documento_consentimiento, firma_consentimiento, titulo, descripcion, sobres,
+        documento_consentimiento, firma_consentimiento, titulo, descripcion, sobres, sobre_pintor,
     )
 
 
