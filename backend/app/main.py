@@ -3,7 +3,7 @@ from fastapi.exceptions import RequestValidationError
 import logging
 import app.exceptions.exception_handlers as exception_handlers
 from app.exceptions.custom_exceptions import *
-from app.routes import auth, pintores, pinturas, jurado, evaluaciones, presidente, resultados
+from app.routes import auth, pintores, pinturas, jurado, evaluaciones, presidente, resultados, avatars
 from fastapi.staticfiles import StaticFiles
 import os
 from fastapi.middleware.cors import CORSMiddleware
@@ -28,18 +28,16 @@ app: FastAPI = FastAPI(
 )
 
 # Configuracion CORS
+ORIGENES = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"], 
+    allow_origins=ORIGENES,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-# === Archivos estaticos (fotos de perfil). Las pinturas cifradas NO se sirven aqui. === #
-os.makedirs("static/avatars", exist_ok=True)
-app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # === Registrar Rutas === #
 app.include_router(auth.router)
@@ -49,6 +47,7 @@ app.include_router(jurado.router)
 app.include_router(evaluaciones.router)
 app.include_router(presidente.router)
 app.include_router(resultados.router)
+app.include_router(avatars.router)
 
 # === Registrar Exception Handlers === #
 app.add_exception_handler(

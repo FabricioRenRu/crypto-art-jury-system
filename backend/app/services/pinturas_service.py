@@ -1,4 +1,8 @@
-"""Persistencia de pinturas cifradas, sobres RSA-OAEP y verificación del consentimiento del pintor."""
+"""
+app/services/pinturas_service.py
+Persistencia de pinturas cifradas, sobres RSA-OAEP y verificación del consentimiento del pintor.
+Los paquetes cifrados se guardan con app/utils/almacenamiento (disco en local, bucket en la nube).
+"""
 import base64
 import binascii
 import json
@@ -26,6 +30,7 @@ from app.models.sobrellave import SobreLlave
 from app.schemas.jurado_schemas import PinturaCifradaJuezResponse
 from app.schemas.pintor_schemas import MisObrasResponse, PerfilPintorResponse, PinturaResponse
 from app.utils import crypto
+from app.utils import almacenamiento
 
 logger = logging.getLogger(__name__)
 
@@ -33,10 +38,7 @@ TORNEO: Final[str] = os.getenv("TORNEO_NOMBRE", "Torneo Internacional ArtClash P
 TOTAL_SLOTS: Final[int] = 1  # una pintura por pintor (Pintura.pintor_id es unico)
 MAX_BYTES: Final[int] = int(os.getenv("MAX_UPLOAD_MB", "50")) * 1024 * 1024
 MAX_PALABRAS_DESCRIPCION: Final[int] = 500
-STORAGE_DIR: Final[str] = os.getenv("STORAGE_DIR", "storage/pinturas_cifradas")
 TAMANO_SOBRE_PINTOR: Final[int] = 60  # nonce(12) + K_AES cifrada(32) + tag(16)
-
-os.makedirs(STORAGE_DIR, exist_ok=True)
 
 
 def _estado(pintura: Pintura) -> str:
@@ -92,14 +94,6 @@ def _validar_sobres(db: Session, sobres_json: str) -> list[tuple[uuid.UUID, str]
             raise ArchivoInvalidoException("Un sobre de llave no tiene el tamano de un bloque RSA.")
         validados.append((juez.id, sobre_b64))
     return validados
-
-
-def _ruta_absoluta(ruta_relativa: str) -> str:
-    base = os.path.realpath(STORAGE_DIR)
-    ruta = os.path.realpath(os.path.join(base, ruta_relativa))
-    if not ruta.startswith(base + os.sep):
-        raise RecursoNoEncontradoException("Archivo no encontrado")
-    return ruta
 
 
 # --------------------------------------------------------------------------- #
@@ -198,7 +192,7 @@ def cargar_pintura(
 
     hash_cifrado = crypto.sha256_hex(contenido)
 
-        # Sobre del propio pintor: el servidor solo revisa forma y tamaño, no lo puede abrir
+    # Sobre del propio pintor: el servidor solo revisa forma y tamaño, no lo puede abrir
     try:
         if len(base64.b64decode(sobre_pintor_b64, validate=True)) != TAMANO_SOBRE_PINTOR:
             raise ValueError("Tamaño inválido")
@@ -211,10 +205,9 @@ def cargar_pintura(
         sobres.append(SobreLlave(id_pintura=id_pintura, id_jurado=id_juez, llave_aes_cifrada=sobre_b64))
 
     # --- Persistir el archivo cifrado y su consentimiento ------------------- #
-    nombre_archivo = f"{id_pintura}.bin"
-    ruta_disco = _ruta_absoluta(nombre_archivo)
-    with open(ruta_disco, "wb") as f:
-        f.write(contenido)
+    # Prefijo "pinturas/": en el bucket conviven pinturas y avatares en carpetas separadas
+    nombre_archivo = f"pinturas/{id_pintura}.bin"
+    almacenamiento.guardar(nombre_archivo, contenido)
 
     pintura = Pintura(
         id=id_pintura,
@@ -232,11 +225,11 @@ def cargar_pintura(
         pinturas_repository.save_con_sobres(db, pintura, sobres)
     except IntegrityError:
         db.rollback()
-        os.remove(ruta_disco)
+        almacenamiento.borrar(nombre_archivo)
         raise PinturaYaExistenteException("Ya registraste tu pintura; no hay slots disponibles.")
     except Exception:
         db.rollback()
-        os.remove(ruta_disco)
+        almacenamiento.borrar(nombre_archivo)
         raise
 
     pintura = pinturas_repository.find_by_pintor(db, id_pintor)
@@ -252,12 +245,7 @@ def obtener_imagen_cifrada_del_dueno(
     if pintura is None or str(pintura.pintor_id) != payload_token["sub"]:
         raise RecursoNoEncontradoException("Pintura no encontrada")
 
-    try:
-        with open(_ruta_absoluta(pintura.ruta_pintura_cifrada), "rb") as f:
-            return f.read()
-    except FileNotFoundError as exc:
-        logger.error("No se encontró el paquete cifrado de la pintura %s", pintura.id)
-        raise RecursoNoEncontradoException("No se pudo recuperar la imagen.") from exc
+    return leer_paquete_cifrado(pintura)
 
 
 def descargar_para_juez(db: Session, payload_token: dict, id_pintura: uuid.UUID) -> PinturaCifradaJuezResponse:
@@ -271,12 +259,7 @@ def descargar_para_juez(db: Session, payload_token: dict, id_pintura: uuid.UUID)
         # Sin sobre para este juez la obra no se le asigno
         raise RecursoNoEncontradoException("No tienes un sobre de llave para esta pintura")
 
-    try:
-        with open(_ruta_absoluta(pintura.ruta_pintura_cifrada), "rb") as f:
-            paquete = f.read()
-    except FileNotFoundError as exc:
-        logger.error("No se encontró el paquete cifrado de la pintura %s", pintura.id)
-        raise RecursoNoEncontradoException("No se pudo recuperar la pintura cifrada.") from exc
+    paquete = leer_paquete_cifrado(pintura)
 
     return PinturaCifradaJuezResponse(
         id_pintura=pintura.id,
@@ -290,11 +273,10 @@ def descargar_para_juez(db: Session, payload_token: dict, id_pintura: uuid.UUID)
 
 
 def leer_paquete_cifrado(pintura: Pintura) -> bytes:
-    """Bytes nonce||ciphertext||tag de una obra."""
+    """Bytes nonce||ciphertext||tag de una obra (disco o bucket, según STORAGE_BACKEND)."""
     try:
-        with open(_ruta_absoluta(pintura.ruta_pintura_cifrada), "rb") as f:
-            return f.read()
-    except FileNotFoundError as exc:
+        return almacenamiento.leer(pintura.ruta_pintura_cifrada)
+    except almacenamiento.ArchivoNoEncontrado as exc:
         logger.error("No se encontró el paquete cifrado de la pintura %s", pintura.id)
         raise RecursoNoEncontradoException("No se pudo recuperar la pintura cifrada.") from exc
 
