@@ -2,18 +2,7 @@
  * routes/AppRouter.tsx
  * Define qué página se muestra en cada URL.
  *
- * Hay dos grupos de rutas porque usan encabezados distintos:
- *  - Inicio → MainLayout con variante "public".
- *  - Resto  → MainLayout con variante "competition".
- * Cualquier ruta desconocida redirige a Inicio.
- */
-/**
- * routes/AppRouter.tsx
- * Define qué página se muestra en cada URL.
- *
- * Hay dos grupos de rutas porque usan encabezados distintos:
- *  - Inicio → MainLayout con variante "public".
- *  - Resto  → MainLayout con variante "competition".
+ * Las páginas comparten el mismo layout y encabezado.
  * Cualquier ruta desconocida redirige a Inicio.
  */
 import { Navigate, Route, Routes } from 'react-router-dom';
@@ -33,11 +22,11 @@ import ResultadosPage from '../pages/ResultadosPage';
 export default function AppRouter() {
   return (
     <Routes>
-      <Route element={<MainLayout variant="public" />}>
+      <Route element={<MainLayout />}>
         <Route path={PATHS.inicio} element={<InicioPage />} />
       </Route>
 
-      <Route element={<MainLayout variant="competition" />}>
+      <Route element={<MainLayout />}>
         <Route path={PATHS.sesion} element={<SesionPage />} />
         <Route path={PATHS.registroPintor} element={<RegistroPintorPage />} />
         <Route path={PATHS.registroJurado} element={<RegistroJuradoPage />} />

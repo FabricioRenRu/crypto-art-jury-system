@@ -1908,3 +1908,10 @@ NameError: name 'RSA' is not defined
 2026-10-31 17:33:12,182 - app.services.evaluacion_service - INFO - Evaluación bab5c1d2-3175-40ee-a9d9-03f4fd441440 publicada
 2026-10-31 17:35:16,973 - app.services.evaluacion_service - INFO - Evaluación 415b90cf-e899-4ff3-92ec-329534588eab publicada
 2026-11-02 17:46:02,704 - app.services.evaluacion_service - INFO - Evaluación 1d61e13c-dd32-42e9-9065-8735a559eebc publicada
+2026-11-03 12:52:56,794 - app.services.jurado_service - ERROR - Se esperaban 3 jueces y hay 0
+2026-11-03 12:52:56,811 - app.exceptions.exception_handlers - WARNING - JURADO_INCOMPLETO en /api/jurado/llaves-publicas: El jurado aun no esta configurado; intenta mas tarde.
+2026-11-03 12:59:19,499 - app.services.evaluacion_service - INFO - Evaluación c5b86fcc-5bd4-401c-9b67-fbf2a5651b94 publicada
+2026-11-03 13:01:52,081 - app.services.evaluacion_service - INFO - Evaluación 1f3e9503-294b-4636-8f23-f2159c7ebb25 publicada
+2026-11-03 13:02:08,614 - app.exceptions.exception_handlers - WARNING - Intento de autenticacion con credenciales incorrectas
+2026-11-03 13:02:30,637 - app.exceptions.exception_handlers - WARNING - Intento de autenticacion con credenciales incorrectas
+2026-11-03 13:02:44,030 - app.services.evaluacion_service - INFO - Evaluación dbf8cbe9-b693-4928-9403-304b031c60c2 publicada
