@@ -30,12 +30,22 @@ const MAPA_FUNCIONES: Record<string, string> = {
   [Acciones.ABRIR_SOBRE_PINTOR]: 'abrir_sobre_pintor',
   [Acciones.DESCIFRAR_OBRA_PUBLICA]: 'descifrar_obra_publica',
   [Acciones.CERRAR_SESION]: 'cerrar_sesion',
+  [Acciones.DESCRIBIR_LLAVE_ECDSA]: 'describir_llave_ecdsa',
+  [Acciones.DESCRIBIR_CIFRADO_AES]: 'describir_cifrado_aes',
+  [Acciones.DESCRIBIR_SOBRES]: 'describir_sobres',
+  [Acciones.DESCRIBIR_SOBRE_PINTOR]: 'describir_sobre_pintor',
+  [Acciones.DESCRIBIR_FIRMA_ECDSA]: 'describir_firma_ecdsa',
+  [Acciones.DESCRIBIR_LLAVE_RSA]: 'describir_llave_rsa',
+  [Acciones.DESCRIBIR_SOBRE_JUEZ]: 'describir_sobre_juez',
+  [Acciones.DESCRIBIR_CEGADO]: 'describir_cegado',
+  [Acciones.DESCRIBIR_FIRMA_CIEGA]: 'describir_firma_ciega',
 };
 
 /** Módulos que se copian al sistema de archivos virtual de Pyodide antes de correr main.py */
 const MODULOS_PYTHON = [
   'rsa_utils', 'aes_utils', 'ecdsa_utils', 'session_utils', 'sobre_llave_utils',
-  'sobre_pintor_utils', 'blind_signature_utils',
+  'sobre_pintor_utils', 'blind_signature_utils', 'evidencia_utils',
+
 ];
 
 let pyodide: any = null;

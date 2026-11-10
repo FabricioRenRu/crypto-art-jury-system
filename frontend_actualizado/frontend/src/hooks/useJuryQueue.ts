@@ -9,7 +9,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { juradoService } from '../services/juradoService';
 import { useCryptoWorker } from './useCryptoWorker';
 import { Acciones } from '../workers/crypto.actions';
-import type { JuryArtwork } from '../types';
+import { describirCripto } from '../utils/evidenciaCripto';
+import type { JuryArtwork, SeccionCripto } from '../types';
 import type { PinturaAsignada } from '../types/jurado';
 
 function base64ABytes(texto: string): Uint8Array {
@@ -27,6 +28,7 @@ export const useJuryQueue = () => {
   const [ratedIds, setRatedIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [llaveRsa, setLlaveRsa] = useState<SeccionCripto[]>([]);
 
   // object URLs de las imágenes descifradas; se liberan al desmontar
   const urlsRef = useRef<string[]>([]);
@@ -37,6 +39,10 @@ export const useJuryQueue = () => {
 
     // RSA-OAEP: el worker recupera K_AES con la llave privada del juez
     await ejecutarAccion(Acciones.ABRIR_SOBRE, {
+      id_pintura: pintura.id,
+      sobre: descarga.sobre_llave,
+    });
+    const evidencia = await describirCripto(ejecutarAccion, Acciones.DESCRIBIR_SOBRE_JUEZ, {
       id_pintura: pintura.id,
       sobre: descarga.sobre_llave,
     });
@@ -57,6 +63,7 @@ export const useJuryQueue = () => {
       title: pintura.titulo,
       imageUrl,
       idPintura: pintura.id,
+      evidencia,
     };
   }, [ejecutarAccion]);
 
@@ -76,6 +83,8 @@ export const useJuryQueue = () => {
       })
       
 
+      setLlaveRsa(await describirCripto(ejecutarAccion, Acciones.DESCRIBIR_LLAVE_RSA));
+
       const { pinturas } = await juradoService.listarMisPinturas();
       // Una por una para no saturar la memoria del worker con varias imágenes a la vez
       const obras: JuryArtwork[] = [];
@@ -89,7 +98,7 @@ export const useJuryQueue = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [abrirObra]);
+  }, [abrirObra, ejecutarAccion]);
 
   useEffect(() => {
     if (!estaListo) {
@@ -99,5 +108,6 @@ export const useJuryQueue = () => {
     return () => urlsRef.current.forEach((u) => URL.revokeObjectURL(u));
   }, [estaListo, cargar]);
 
-  return { queue, ratedIds, isLoading: isLoading || !estaListo, error, recargar: cargar };
+  return { queue, ratedIds, isLoading: isLoading || !estaListo, error, recargar: cargar, llaveRsa };
+
 };

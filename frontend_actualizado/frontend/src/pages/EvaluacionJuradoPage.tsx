@@ -17,6 +17,8 @@ import { useJuryQueue } from '../hooks/useJuryQueue';
 import { STAR_OPTIONS } from '../data/juryQueue';
 import type { JuryArtwork } from '../types';
 import PublicationBanner from '../components/jury/PublicationBanner';
+import PanelCriptografico from '../components/crypto/PanelCriptografico';
+import type { SeccionCripto } from '../types';
 import { usePublicacionJurado } from '../hooks/usePublicacionJurado';
 
 function MensajeMesa({ icono, texto, onReintentar }: { icono: string; texto: string; onReintentar?: () => void }) {
@@ -39,9 +41,9 @@ function MensajeMesa({ icono, texto, onReintentar }: { icono: string; texto: str
   );
 }
 
-function MesaCalificacion({ queue, initialRatedIds }: { queue: JuryArtwork[]; initialRatedIds: string[] }) {
+function MesaCalificacion({ queue, initialRatedIds, llaveRsa }: { queue: JuryArtwork[]; initialRatedIds: string[]; llaveRsa: SeccionCripto[] }) {
   const {
-    currentIndex, currentArtwork, currentDraft, ratedIds, saveStatus, errorMessage,
+    currentIndex, currentArtwork, currentDraft, ratedIds, saveStatus, errorMessage, evidenciaCegado,
     updateDraft, goTo, goNext, goPrevious, saveRating,
   } = useJuryEvaluation(queue, initialRatedIds);
 
@@ -64,6 +66,11 @@ function MesaCalificacion({ queue, initialRatedIds }: { queue: JuryArtwork[]; in
             onNext={goNext}
           />
         </div>
+        <div className="max-w-7xl mx-auto flex flex-col gap-space-md mt-space-xl">
+          <PanelCriptografico titulo={`Apertura del sobre RSA-OAEP de ${currentArtwork.id}`} secciones={currentArtwork.evidencia ?? []} />
+          <PanelCriptografico titulo="Firma ciega: tu evaluación cegada" secciones={evidenciaCegado} abierto />
+          <PanelCriptografico titulo="Tu llave privada RSA: primos p, q y exponentes" secciones={llaveRsa} />
+        </div>
       </section>
 
       <QueueStrip
@@ -79,7 +86,7 @@ function MesaCalificacion({ queue, initialRatedIds }: { queue: JuryArtwork[]; in
 }
 
 export default function EvaluacionJuradoPage() {
-  const { queue, ratedIds, isLoading, error, recargar } = useJuryQueue();
+  const { queue, ratedIds, isLoading, error, recargar, llaveRsa } = useJuryQueue();
   /** HOOK: pasos 7-9 (recoger s', descegar, firmar con PSS y publicar). Espera a que la cola cargue,
    *  porque ahí se inyecta la llave pública del presidente en el worker. */
   const publicacion = usePublicacionJurado(!isLoading && !error);
@@ -92,7 +99,8 @@ export default function EvaluacionJuradoPage() {
   } else if (queue.length === 0) {
     contenido = <MensajeMesa icono="inbox" texto="Todavía no hay obras con un sobre para ti." />;
   } else {
-    contenido = <MesaCalificacion queue={queue} initialRatedIds={ratedIds} />;
+    contenido = <MesaCalificacion queue={queue} initialRatedIds={ratedIds} llaveRsa={llaveRsa} />;
+
   }
 
   return (

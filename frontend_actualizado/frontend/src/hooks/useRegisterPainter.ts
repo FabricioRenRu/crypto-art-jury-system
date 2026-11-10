@@ -8,6 +8,8 @@ import type { PintorCreate, PintorResponse } from '../types/pintor';
 import { descargarArchivoTexto } from '../utils/fileUtils';
 import { useCryptoWorker } from './useCryptoWorker';
 import { Acciones } from '../workers/crypto.actions';
+import { describirCripto } from '../utils/evidenciaCripto';
+import type { SeccionCripto } from '../types';
 
 
 //Lo que la UI nos manda
@@ -24,17 +26,22 @@ export const useRegisterPainter = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PintorResponse | null>(null);
+  const [evidencia, setEvidencia] = useState<SeccionCripto[]>([]);
 
   const register = async (formData: FormularioRegistro) => {
     setIsLoading(true);
     setError(null);
     setResult(null);
+    setEvidencia([]);
 
     let parLlaves: { private_key: string; public_key: string } | null = null;
     try {
       // El worker del navegador genera el par; la privada no se agrega al payload HTTP.
       const llavesGeneradas = await ejecutarAccion(Acciones.GENERAR_ECDSA);
       parLlaves = llavesGeneradas;
+      const secciones = await describirCripto(ejecutarAccion, Acciones.DESCRIBIR_LLAVE_ECDSA, {
+        pem: llavesGeneradas.private_key,
+      });
       const payload: PintorCreate = {
         nombre: formData.nombre,
         seudonimo: formData.seudonimo,
@@ -53,6 +60,7 @@ export const useRegisterPainter = () => {
       const nombreArchivo = `llave_privada_${formData.nombre.replace(/\s+/g, '_').toLowerCase()}.pem`;
       descargarArchivoTexto(llavesGeneradas.private_key, nombreArchivo);
 
+      setEvidencia(secciones);
       setResult({
         id: backendResponse.id,
         email: backendResponse.email,
@@ -70,5 +78,6 @@ export const useRegisterPainter = () => {
     }
   };
 
-  return { register, isLoading, error, result };
+  return { register, isLoading, error, result, evidencia };
+
 };

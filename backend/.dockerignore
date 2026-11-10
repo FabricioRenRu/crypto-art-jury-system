@@ -1,0 +1,11 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+.env
+.env.*
+*.pem
+storage/
+static/avatars/*
+app.log
+*.bin

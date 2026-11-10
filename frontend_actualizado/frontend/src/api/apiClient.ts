@@ -3,7 +3,7 @@
  * Cliente base para hablar con el backend. Todas las peticiones pasan por aquí,
  * así la URL, los headers y el manejo de errores están en un solo lugar.
  */
-export const API_URL = "http://localhost:8000";   // DESPUES CAMBIARLO POR UN .ENV
+export const API_URL = import.meta.env.VITE_API_URL ?? '';
 
 /** Headers de autenticación con el JWT guardado al iniciar sesión. */
 function authHeaders(): Record<string, string> {

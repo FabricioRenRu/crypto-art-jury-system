@@ -1,0 +1,36 @@
+services:
+  backend:
+    build: ./backend
+    env_file: ./backend/.env.production
+
+    restart: unless-stopped        # si Cloud SQL aún no prende, reintenta solo
+
+  web:
+    build: ./frontend_actualizado/frontend
+    depends_on: [backend]
+    restart: unless-stopped
+
+  waf:
+    image: owasp/modsecurity-crs:nginx-alpine
+    container_name: artclash-waf   # nombre fijo: lo usan los hooks de certbot
+    depends_on: [web]
+    restart: unless-stopped
+    ports:
+      - "80:8080"                  # la imagen corre sin root: escucha en 8080/8443
+      - "443:8443"
+    environment:
+      BACKEND: http://web:80
+      SERVER_NAME: artclash.duckdns.org
+      NGINX_ALWAYS_TLS_REDIRECT: "on"
+      SSL_CERT_FILE: /etc/nginx/certs/fullchain.pem
+      SSL_CERT_KEY_FILE: /etc/nginx/certs/privkey.pem
+      MODSEC_RULE_ENGINE: DetectionOnly   # primero solo registra; luego "On"
+      BLOCKING_PARANOIA: 1
+      ANOMALY_INBOUND: 5
+      MODSEC_REQ_BODY_LIMIT: 73400320          # 70 MB (subida de pinturas)
+      MODSEC_REQ_BODY_NOFILES_LIMIT: 4194304   # 4 MB (registro con foto en base64)
+      MODSEC_RESP_BODY_ACCESS: "Off"           # no inspeccionar respuestas grandes (obras en base64)
+      PROXY_TIMEOUT: 120s
+    volumes:
+      - /opt/artclash/certs:/etc/nginx/certs:ro
+      - ./deploy/waf/body-size.conf:/etc/nginx/templates/conf.d/body-size.conf.template:ro

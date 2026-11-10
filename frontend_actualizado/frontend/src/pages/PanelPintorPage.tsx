@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom';
 import Icon from '../components/ui/Icon';
 import ArtworkCard from '../components/painter/ArtworkCard';
 import UploadArtworkModal from '../components/painter/UploadArtworkModal';
+import PanelCriptografico from '../components/crypto/PanelCriptografico';
 import { usePainterPanel } from '../hooks/usePainterPanel';
 import { PATHS } from '../routes/paths';
 
@@ -20,7 +21,7 @@ export default function PanelPintorPage() {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
 
   const navigate = useNavigate();
-  const { profile, artworks, totalSlots, error, uploadArtwork } = usePainterPanel();
+  const { profile, artworks, totalSlots, error, uploadArtwork, evidencia } = usePainterPanel();
 
   /** Sin JWT no hay panel: se manda al inicio de sesión. */
   useEffect(() => {
@@ -103,6 +104,13 @@ export default function PanelPintorPage() {
               <ArtworkCard key={obra.id} artwork={obra} />
             ))}
           </div>
+
+          <PanelCriptografico
+            titulo="Qué pasó con tu última obra: AES-GCM, sobres RSA-OAEP y firma ECDSA"
+            secciones={evidencia}
+            abierto
+          />
+
         </div>
       </div>
 

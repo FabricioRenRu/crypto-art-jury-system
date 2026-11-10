@@ -11,7 +11,8 @@ import { painterService } from '../services/painterService';
 import { juradoService } from '../services/juradoService';
 import { useCryptoWorker } from './useCryptoWorker';
 import { Acciones } from '../workers/crypto.actions';
-import type { PainterArtwork, PainterProfile } from '../types';
+import { describirCripto } from '../utils/evidenciaCripto';
+import type { PainterArtwork, PainterProfile, SeccionCripto } from '../types';
 import type { PinturaResponse } from '../types/pintor';
 import type { UploadArtworkData } from '../components/painter/UploadArtworkModal';
 import type { PinturaCifrada } from '../services/painterService';
@@ -42,6 +43,7 @@ export const usePainterPanel = () => {
   const [totalSlots, setTotalSlots] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [evidencia, setEvidencia] = useState<SeccionCripto[]>([]);
 
   // object URLs de las imágenes descifradas; se liberan al desmontar
   const urlsRef = useRef<string[]>([]);
@@ -127,6 +129,12 @@ export const usePainterPanel = () => {
         id_pintura: idPintura,
         datos: new Uint8Array(await data.file.arrayBuffer()),
       });
+      const evidenciaAes = await describirCripto(ejecutarAccion, Acciones.DESCRIBIR_CIFRADO_AES, {
+        id_pintura: idPintura,
+        cifrado: cifrado.cifrado,
+        hash_original: cifrado.hash_original,
+        tam_original: data.file.size,
+      });
       // Se bajan las llaves públicas del jurado y el worker arma un sobre RSA-OAEP por juez
       const llavesJurado = await juradoService.obtenerLlavesPublicas();
       const sobres = await ejecutarAccion(Acciones.GENERAR_SOBRES, {
@@ -141,6 +149,19 @@ export const usePainterPanel = () => {
         id_pintura: idPintura,
         id_pintor: obtenerIdPintorDeSesion(),
         hash_cifrado: cifrado.hash_cifrado,
+      });
+      const evidenciaSobres = await describirCripto(ejecutarAccion, Acciones.DESCRIBIR_SOBRES, {
+        id_pintura: idPintura,
+        sobres: sobres.sobres,
+        jueces: llavesJurado.jueces,
+      });
+      const evidenciaSobrePintor = await describirCripto(ejecutarAccion, Acciones.DESCRIBIR_SOBRE_PINTOR, {
+        id_pintura: idPintura,
+        sobre_pintor,
+      });
+      const evidenciaFirma = await describirCripto(ejecutarAccion, Acciones.DESCRIBIR_FIRMA_ECDSA, {
+        documento: consentimiento.documento,
+        firma_hex: consentimiento.firma_hex,
       });
       const pintura: PinturaCifrada = {
         id_pintura: idPintura,
@@ -159,10 +180,12 @@ export const usePainterPanel = () => {
       );
       const nueva = await aArtwork(obra);
       setArtworks((actuales) => [...actuales, nueva]);
+      setEvidencia([...evidenciaAes, ...evidenciaSobres, ...evidenciaSobrePintor, ...evidenciaFirma]);
     } catch (err: any) {
       setError(err.message || 'No se pudo subir la obra.');
     }
   };
 
-  return { profile, artworks, totalSlots, isLoading, error, uploadArtwork };
+  return { profile, artworks, totalSlots, isLoading, error, uploadArtwork, evidencia };
+
 };

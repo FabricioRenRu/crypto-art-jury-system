@@ -16,6 +16,17 @@ from blind_signature_utils import (
     verificar_evaluacion_publica,
 )
 from sobre_pintor_utils import generar_sobre_pintor, abrir_sobre_pintor
+from evidencia_utils import (
+    describir_llave_ecdsa,
+    describir_cifrado_aes,
+    describir_sobres,
+    describir_sobre_pintor,
+    describir_firma_ecdsa,
+    describir_llave_rsa,
+    describir_sobre_juez,
+    describir_cegado,
+    describir_firma_ciega,
+)
 
 
 def probar_conexion(payload):
