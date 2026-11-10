@@ -11,6 +11,8 @@ import type { JuryArtwork } from '../types';
 import { Acciones } from '../workers/crypto.actions';
 import { juradoService } from '../services/juradoService';
 import { leerPayloadJWT } from '../utils/session';
+import { describirCripto } from '../utils/evidenciaCripto';
+import type { SeccionCripto } from '../types';
 
 /** Borrador de la calificación de una obra. */
 export interface JuryDraft {
@@ -38,6 +40,7 @@ export function useJuryEvaluation(queue: JuryArtwork[], initialRatedIds: string[
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   /** STATE: mensaje de error del último guardado. */
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [evidenciaCegado, setEvidenciaCegado] = useState<Record<string, SeccionCripto[]>>({});
 
   /** Guarda los temporizadores para limpiarlos si el componente se desmonta. */
   const timers = useRef<number[]>([]);
@@ -95,6 +98,14 @@ export function useJuryEvaluation(queue: JuryArtwork[], initialRatedIds: string[
         estrellas: currentDraft.stars,
         comentario: currentDraft.comment,
       });
+      const evidencia = await describirCripto(ejecutarAccion, Acciones.DESCRIBIR_CEGADO, {
+        id_pintura: currentArtwork.idPintura,
+        id_juez: idJuez,
+        estrellas: currentDraft.stars,
+        comentario: currentDraft.comment,
+        h_blinded,
+      });
+      setEvidenciaCegado((actuales) => ({ ...actuales, [currentArtwork.id]: evidencia }));
 
       // Paso 3: el servidor guarda h' y la evaluación cifrada, sin poder leerla
       await juradoService.enviarEvaluacionCegada({
@@ -123,7 +134,9 @@ export function useJuryEvaluation(queue: JuryArtwork[], initialRatedIds: string[
     ratedIds,
     saveStatus,
     errorMessage,
+    evidenciaCegado: currentArtwork ? (evidenciaCegado[currentArtwork.id] ?? []) : [],
     updateDraft,
+
     goTo,
     goNext,
     goPrevious,

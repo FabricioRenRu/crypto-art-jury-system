@@ -11,6 +11,8 @@ import { useState, useEffect } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Icon from '../components/ui/Icon';
+import PanelCriptografico from '../components/crypto/PanelCriptografico';
+
 import { useRegisterPainter } from '../hooks/useRegisterPainter';
 import { DEFAULT_AVATAR_URL } from '../data/assets';
 import { PATHS } from '../routes/paths';
@@ -41,7 +43,7 @@ const BENEFITS = [
 ];
 
 export default function RegistroPintorPage() {
-  const { register, isLoading, error, result } = useRegisterPainter();
+  const { register, isLoading, error, result, evidencia } = useRegisterPainter();
   const navigate = useNavigate();
 
   /** STATE: campos del formulario. */
@@ -79,7 +81,7 @@ export default function RegistroPintorPage() {
   };
 
   useEffect(() => {
-    if (result) {
+    if (result && evidencia.length === 0) {
       // Si hay un resultado exitoso, esperamos 4 segundos y lo mandamos al login
       const timer = setTimeout(() => {
         navigate(PATHS.sesion);
@@ -88,7 +90,7 @@ export default function RegistroPintorPage() {
       // Limpieza del timer por seguridad
       return () => clearTimeout(timer);
     }
-  }, [result, navigate]);
+  }, [result, evidencia, navigate]);
 
   return (
     <div className="flex flex-col w-full">
@@ -270,11 +272,25 @@ export default function RegistroPintorPage() {
                         ID: <span className="font-mono text-xs">{result.id}</span>
                       </div>
                       <p className="text-xs text-primary-container mt-2 font-medium">
-                        ⚠️ La llave privada se generó en tu dispositivo y se descargó tras confirmar el registro. El servidor solo recibió la llave pública. Guarda el archivo .pem en un lugar seguro: lo necesitarás para firmar. Redirigiendo al inicio de sesión...
+                        ⚠️ La llave privada se generó en tu dispositivo y se descargó tras confirmar el registro. El servidor solo recibió la llave pública. Guarda el archivo .pem en un lugar seguro: lo necesitarás para firmar. {evidencia.length === 0 && 'Redirigiendo al inicio de sesión...'}
                       </p>
                     </div>
                   </div>
                 )}
+                {result && evidencia.length > 0 && (
+                  <div className="flex flex-col gap-space-sm">
+                    <PanelCriptografico titulo="Tu par de llaves ECDSA P-256" secciones={evidencia} abierto />
+                    <button
+                      type="button"
+                      onClick={() => navigate(PATHS.sesion)}
+                      className="self-end inline-flex items-center gap-2 px-space-md py-space-sm rounded-lg bg-primary-container text-on-primary font-label-md text-label-md uppercase tracking-wider"
+                    >
+                      <span>Ir a iniciar sesión</span>
+                      <Icon name="arrow_forward" className="text-[18px]" />
+                    </button>
+                  </div>
+                )}
+
 
                 <div className="pt-space-sm flex flex-col sm:flex-row items-center gap-space-md justify-between">
                   <button

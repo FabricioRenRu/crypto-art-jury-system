@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import Icon from '../components/ui/Icon';
 import ArtworkTable from '../components/approval/ArtworkTable';
 import SignatureModal from '../components/approval/SignatureModal';
+import PanelCriptografico from '../components/crypto/PanelCriptografico';
 import { usePresidentApproval } from '../hooks/usePresidentApproval';
 import { PATHS } from '../routes/paths';
 
@@ -22,7 +23,9 @@ export default function VistoBuenoPresidentePage() {
     selection,
     openModal,
     closeModal,
-    confirmSignature
+    confirmSignature,
+    llaveRsa,
+    evidenciaFirma,
   } = usePresidentApproval();
 
   const total = evaluacionesPendientes.length;
@@ -96,6 +99,10 @@ export default function VistoBuenoPresidentePage() {
             </span>
           </div>
         </div>
+
+        <PanelCriptografico titulo="Firmas ciegas emitidas: s' = h'^d mod n" secciones={evidenciaFirma} abierto />
+        <PanelCriptografico titulo="Tu llave privada RSA: primos p, q y exponentes" secciones={llaveRsa} />
+
       </div>
 
       <SignatureModal

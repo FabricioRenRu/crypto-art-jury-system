@@ -66,7 +66,21 @@ export interface JuryArtwork {
   title: string;
   imageUrl: string;
   idPintura?: string; // UUID de la pintura en el backend (para guardar la evaluacion)
+  evidencia?: SeccionCripto[];
 }
+
+export interface FilaCripto {
+  etiqueta: string;
+  valor: string;
+  nota?: string;
+}
+
+export interface SeccionCripto {
+  titulo: string;
+  descripcion?: string;
+  filas: FilaCripto[];
+}
+
 
 /** Una opcion de la hoja de calificacion del jurado (1 a 3 estrellas). */
 export interface StarOption {
